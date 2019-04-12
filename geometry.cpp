@@ -407,3 +407,20 @@ void reflect(double a1, double b1, double c1, double a2, double b2, double c2, d
 	b = -m;
 	c = m * yy - xx * n;
 }
+
+
+Point bestjump(int vcount,Point Pointset[],Point O,double r){
+	Point t;
+	for(int i=vcount-1;i>=1;i--){
+		if(ptoLinesegdist(O,Lineseg(Pointset[i],Pointset[i-1]),t)<r){
+			Point C=perpendicular(O,Lineseg(Pointset[i],Pointset[i-1]));
+			double d=dist(O,C);
+			double CD=sqrt(r*r-d*d);
+			Point e=Pointset[i]-Pointset[i-1];
+			Point base=e/dist(Pointset[i],Pointset[i-1])*CD;
+			return C+base;
+		}
+	}
+	return Pointset[0];
+}
+
