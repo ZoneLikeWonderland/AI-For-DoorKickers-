@@ -118,29 +118,29 @@ Point StayAwayFromWalls(Point P) {
 	return Point(P.x + dx, P.y + dy);
 }
 
-int temp[MAXN][MAXN];
-int scale = 1;
-void ReduceMap() {
-	rep(i, map.width) {
-		rep(j, map.height) {
-			if (map.pixels[i][j])
-				temp[i / scale][j / scale] = 1;
-		}
-	}
-	map.width /= scale;
-	map.height /= scale;
-	rep(i, map.width) rep(j, map.height) map.pixels[i][j] = temp[i][j];
-}
-Point bigger(Point a) {
-	return Point(a.x * (double)scale, a.y * (double)scale);
-}
-Point smaller(Point a) {
-	return Point(a.x / (double)scale, a.y / (double)scale);
-}
+// int temp[MAXN][MAXN];
+// int scale = 1;
+// void ReduceMap() {
+// 	rep(i, map.width) {
+// 		rep(j, map.height) {
+// 			if (map.pixels[i][j])
+// 				temp[i / scale][j / scale] = 1;
+// 		}
+// 	}
+// 	map.width /= scale;
+// 	map.height /= scale;
+// 	rep(i, map.width) rep(j, map.height) map.pixels[i][j] = temp[i][j];
+// }
+// Point bigger(Point a) {
+// 	return Point(a.x * (double)scale, a.y * (double)scale);
+// }
+// Point smaller(Point a) {
+// 	return Point(a.x / (double)scale, a.y / (double)scale);
+// }
 
 Point FindFirstNode(Point Start, Point Final) {
-	Start = smaller(Start);
-	Final = smaller(Final);
+	// Start = smaller(Start);
+	// Final = smaller(Final);
 
 	Point t = Start;
 	Point s = Final;
@@ -149,7 +149,7 @@ Point FindFirstNode(Point Start, Point Final) {
 	if (FIRST) {
 		FIRST = false;
 		map = Logic::Instance()->map;
-		ReduceMap();
+		// ReduceMap();
 	}
 	Gdist.clear();
 	Gdist.resize(map.width);
@@ -248,10 +248,12 @@ Point FindFirstNode(Point Start, Point Final) {
 		else if (multiply(Final, left, op) < 0)
 			ANS = left;
 		else
-			return bigger(Final);
+			// return bigger(Final);
+			return Final;
 	}
 
-	return bigger(StayAwayFromWalls(ANS));
+	// return bigger(StayAwayFromWalls(ANS));
+	return StayAwayFromWalls(ANS);
 }
 
 void move_smart(int num, Point v, Point &step) {

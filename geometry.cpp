@@ -1,5 +1,5 @@
 #include "geometry.h"
-
+#include<iostream>
 
 /**********************
 *                    *
@@ -422,5 +422,15 @@ Point bestjump(int vcount,Point Pointset[],Point O,double r){
 		}
 	}
 	return Pointset[0];
+}
+
+// return the cross point that is only decided by direction
+Point firstcrosscircle(Point O,double r,Lineseg a){
+	Point C=perpendicular(O,a);
+	double d=dist(O,C);
+	double CD=sqrt(r*r-d*d);
+	Point e=a.s-a.e;
+	Point base=e/dist(a.s,a.e)*CD;
+	return C+base;
 }
 

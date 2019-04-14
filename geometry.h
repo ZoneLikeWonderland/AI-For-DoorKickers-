@@ -48,6 +48,7 @@ struct Point {
 		return Point(a.x + b.x, a.y + b.y);
 	}
 	bool operator==(Point a) { return a.x == x && a.y == y; }
+	bool operator!=(Point a) { return !(a.x == x && a.y == y); }
 	friend Point operator/(Point a, double b) {
 		return Point(a.x / b, a.y / b);
 	}
@@ -238,6 +239,9 @@ bool Point_in_circle(Point o, double r, Point p);
 内含： return 5；
 */
 int CircleRelation(Point p1, double r1, Point p2, double r2);
+
+// return the point where vector cross the circle
+Point firstcrosscircle(Point O,double r,Lineseg a);
 
 /**************************\
 *						  *

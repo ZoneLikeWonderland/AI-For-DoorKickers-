@@ -70,57 +70,7 @@ void move_s(int num, Point v)
     v.y-=pos.y;
     move_relative(num,v);
 }
-int dis[320][320],inf_dis;
-queue<pair<int,int>> Q;
-#define mp(a,b) make_pair((a),(b))
-void move_stupid(int num,Point v)
-{
-    memset(dis,127,sizeof dis);
-    memset(&inf_dis,127,sizeof(int));
-    Point pos=GetUnit(num).position;
-    Q.push(mp((int)v.x,(int)v.y));
-    dis[(int)v.x][(int)v.y]=0;
-    while(!Q.empty())
-    {
-        pair<int,int> st=Q.front();Q.pop();
-        int D=dis[st.first][st.second];
-        for(int direct=0;direct<4;direct++)
-        {
-            int dx=0,dy=0,x,y;
-            if(direct==0)dx=-1;
-            if(direct==1)dx=1;
-            if(direct==2)dy=-1;
-            if(direct==3)dy=1;
-            x=dx+st.first;
-            y=dy+st.second;
-            if(!isWall(x,y)&&dis[x][y]==inf_dis)
-            {
-                dis[x][y]=D+1;
-                Q.push(mp(x,y));
-            }
-        }
-    }
-    //move_s(num,v);
-    //return;
-    int px=pos.x,py=pos.y;
-    int base=rand()%4;
-    for(int i=0;i<4;i++)
-    {
-        int direct=(i+base)%4;
-        int dx=0,dy=0,x,y;
-        if(direct==0)dx=-1;
-        if(direct==1)dx=1;
-        if(direct==2)dy=-1;
-        if(direct==3)dy=1;
-        x=px+dx;y=py+dy;
-        if(dis[x][y]<dis[px][py])
-        {
-            if(dis[px+dx*2][py+dy*2]<dis[x][y])dx*=2,dy*=2;
-            move_relative(num,Point(dx,dy));
-            return;
-        }
-    }
-}
+
 bool canflash(int num)
 {
     return GetUnit(num).flash_time<=0&&logic->crystal[logic->faction^1].belong!=node_translate(logic->faction,num);
@@ -156,46 +106,9 @@ void flash_s(int num, Point v)
 }
 double RandDouble(){return rand()/(double)RAND_MAX;}
 double RandDouble(double L,double R){return RandDouble()*(R-L)+L;}
-/*double dist(Point p1,Point p2)
-{
-    p1.x-=p2.x;
-    p1.y-=p2.y;
-    return sqrt(p1.x*p1.x+p1.y*p1.y);
-}//*/
 
 
-// void playerAI() {
-//     logic = Logic::Instance();
-//     if(logic->frame==1)srand(time(NULL));
-
-// 	Point dest[N];
-// 	rep(i,N){
-// 		dest[i]=logic->crystal[logic->faction^1].position;
-// 		if(logic->crystal[logic->faction^1].belong==logic->faction)
-// 		dest[i]=FixPointInCircle(logic->crystal[logic->faction^1].position,5*CONST::splash_radius,i);
-// 	}
-
-//     rep(i,N){
-// 		if(dist(logic->crystal[logic->faction^1].position,GetUnit(i).position)<CONST::human_velocity)dest[i]=logic->map.target_places[logic->faction];
-// 		move_smart(i,dest[i]),flash_s(i,dest[i]);
-// 	}
-//     rep(i,N)
-//     {
-//         Point mypos=GetUnit(i).position;
-//         Point targ=logic->map.birth_places[logic->faction^1][i];
-//         rep(j,N)
-//         {
-//             Human unit=GetEnemyUnit(j);
-//             if(unit.hp<=0)continue;
-//             if(dist(unit.position,mypos)<dist(targ,mypos))targ=unit.position;
-//         }
-//         double D=dist(targ,mypos)*0.05;
-//         logic->shoot(i,Point(targ.x+RandDouble(-D,D),targ.y+RandDouble(-D,D)));
-//         logic->meteor(i,Point(targ.x+RandDouble(-10,10),targ.y+RandDouble(-10,10)));
-//     }
-// }
-
-
+// Way search
 using OriginAstar::move_smart;
 
 extern void initwaypoint();
@@ -205,41 +118,56 @@ extern int Astar(Point s, Point t, Point ROP[]);
 
 Point ROP[MAXM];
 
+// avoid fireball
+extern void findthreat(int num);
+extern Point dealthreat(int num, Point v);
+
 void playerAI() {
     auto t=clock();
     logic = Logic::Instance();
     
     static bool ONCE=true;
+    static int stamp=0;
+
     if(ONCE){
         map=logic->map;
         thread th(initwaypoint);
         th.detach();
         ONCE=false;
     }
-    if(!DONE) return;
 
+    bool dontflash=false;
     if(logic->frame==1)srand(time(NULL));
-    Point dest[5]={logic->crystal[logic->faction].position,logic->map.bonus_places[0],logic->map.bonus_places[1]},rush=logic->crystal[logic->faction^1].position;
-    if(~logic->crystal[logic->faction^1].belong)rush=logic->map.target_places[logic->faction];
-    dest[4]=dest[3]=rush;
-
-
-    // for(int i=0;i<5;i++){
-    //     Point step;
-    //     move_smart(i,dest[i],step);
-        // flash_s(i,step);
-    // }
-
-    // ofstream err("1.txt");
-    rep(i,5){
-        Point pos=GetUnit(i).position;
-        int roplen=Astar(pos,dest[i],ROP);
-        move_relative(i,ROP[0]-pos);
-        flash_s(i,bestjump(roplen,ROP,pos,human_velocity));
-        // err<<i<<":"<<GetUnit(i).position.x<<','<<GetUnit(i).position.y<<"->"<<ROP[0].x<<','<<ROP[0].y<<'\n';
+    Point rush=logic->crystal[logic->faction^1].position;
+    if(~logic->crystal[logic->faction^1].belong){
+        rush=logic->map.target_places[logic->faction];
+        dontflash=true;
     }
-    // err.close();
+    Point dest[5]={logic->map.bonus_places[0],logic->map.bonus_places[1],rush,rush,rush};
 
+    if(!DONE){
+        for(int i=0;i<min(stamp/5+3,5);i++){
+            Point step;
+            move_smart(i,dest[i],step);
+            flash_s(i,step);
+        }
+    }
+    else{
+        rep(i,min(stamp/5+3,5)){
+            Point pos=GetUnit(i).position;
+            int roplen=Astar(pos,dest[i],ROP);
+            if(canflash(i)&&!dontflash)
+            flash_s(i,bestjump(roplen,ROP,pos,human_velocity));
+            else
+            {
+                auto T=clock();
+                findthreat(i);
+                Point u=ROP[0]-pos;
+                Point v=dealthreat(i,u);
+                move_relative(i,v);
+            }
+        }
+    }
     for(int i=0;i<5;i++)
     {
         Point mypos=GetUnit(i).position;
@@ -250,11 +178,11 @@ void playerAI() {
             if(unit.hp<=0)continue;
             if(dist(unit.position,mypos)<dist(targ,mypos))targ=unit.position;
         }
-        double D=dist(targ,mypos)*0.2;
+        double D=dist(targ,mypos)*0.05;
         logic->shoot(i,Point(targ.x+RandDouble(-D,D),targ.y+RandDouble(-D,D)));
-        logic->meteor(i,Point(targ.x+RandDouble(-10,10),targ.y+RandDouble(-10,10)));
+        logic->meteor(i,Point(targ.x,targ.y));
     }
-
+    stamp++;
     // ofstream f("1.txt",ios::app);
     // f<<"sum:"<<clock()-t<<'\n';
 }
