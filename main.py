@@ -1,4 +1,4 @@
-PYGAME = False
+PYGAME = True
 DEBUG = False
 
 if PYGAME:
@@ -17,7 +17,6 @@ from MySTL import *
 from multiprocessing import Pool
 import json
 import logging
-import os
 
 BYTEORDER = 'big'
 
@@ -329,7 +328,7 @@ def flash(human, pos):
 
     pos = Point(pos[0], pos[1])
     if L2Distance(human.pos, pos) <= eps + flash_distance and LegalPos(pos, walls):
-        Ev(9, human.number, round(human.pos.x,precision), round(human.pos.y,precision), round(pos.x,precision), round(pos.y,precision))
+        Ev(9, human.number, human.pos.x, human.pos.y, pos.x, pos.y)
         human.pos = pos
         human.flash_time = human.flash_interval
         human.flash_number -= 1
@@ -378,7 +377,7 @@ def meteor_hurt(meteor, human, hurt_record):
 
 def death(human, hurt_dict):
     human.death_time = frames_of_death
-    Ev(3, human.number, round(human.pos.x,precision), round(human.pos.y,precision))
+    Ev(3, human.number, human.pos.x, human.pos.y)
     score[human.faction] += killed_score
     sum_hurt = 0
     for h_id, hurt in hurt_dict.items():
@@ -582,13 +581,13 @@ def RunGame():
 
         hurt_record = [{}] * len(humans)
         for fireball in delFireballs:
-            Ev(6, round(fireball.pos.x,precision), round(fireball.pos.y,precision), fireball.from_number)
+            Ev(6, fireball.pos.x, fireball.pos.y, fireball.from_number)
             for human in humans:
                 fireball_hurt(fireball, human, hurt_record)
             fireballs.remove(fireball)
 
         for meteor in delMeteors:
-            Ev(7, round(meteor.pos.x,precision), round(meteor.pos.y,precision), meteor.from_number)
+            Ev(7, meteor.pos.x, meteor.pos.y, meteor.from_number)
             for human in humans:
                 meteor_hurt(meteor, human, hurt_record)
             meteors.remove(meteor)
@@ -685,14 +684,11 @@ def RunGame():
         replay_dir = "." + os.sep + "Replay" + os.sep
         if not os.path.exists(replay_dir):
             os.mkdir(replay_dir)
-        replay_dir += "replay{}.zip".format(test_num)
     else:
         replay_dir = save_dir
-    name = replay_dir[replay_dir.rfind('/')+1:]
-    Dir = replay_dir[:replay_dir.rfind('/')+1]
-    with open(Dir+name.replace(".zip",".json"), "w")as file:
+    replay_name = "replay{}.json".format(test_num)
+    with open(replay_dir + replay_name, "w")as file:
         file.write(json.dumps(logs))
-    os.system("cd {0} && zip -r {1} {2} && rm {2}".format(Dir,name,name.replace(".zip",".json")))
     if DEBUG:
         WriteToLogFile("################### Result ###################")
         for i, sc in enumerate(score):
