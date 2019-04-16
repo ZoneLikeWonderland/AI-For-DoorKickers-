@@ -55,6 +55,9 @@ struct Point {
 	friend Point operator*(Point a, double b) {
 		return Point(a.x * b, a.y * b);
 	}
+	friend Point operator-(Point a) {
+		return Point(-a.x, -a.y);
+	}
 };
 
 struct Lineseg {
