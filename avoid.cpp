@@ -57,6 +57,7 @@ void findthreat(int num) {
 vector<pair<Point, int>> LR;
 vector<bool> lforbid, rforbid;
 vector<Point> lsecond, rsecond;
+vector<Point> lfirst, rfirst;
 const Point p0(-1, -1);
 Point center, dir;
 
@@ -90,10 +91,14 @@ Point dealthreat(int num, Point v) {
 	rforbid.clear();
 	lsecond.clear();
 	rsecond.clear();
+	lfirst.clear();
+	rfirst.clear();
 	lforbid.resize(coming[num].size(), true);
 	rforbid.resize(coming[num].size(), true);
 	lsecond.resize(coming[num].size(), p0);
 	rsecond.resize(coming[num].size(), p0);
+	lfirst.resize(coming[num].size(), p0);
+	rfirst.resize(coming[num].size(), p0);
 	bool lf = false, rf = false;
 	Point temp;
 	rep(t, DangerFrames) {
@@ -117,10 +122,8 @@ Point dealthreat(int num, Point v) {
 			if (ptoLinesegdist(manpos, Lineseg(lp, lq), temp) <=
 				t * human_velocity + D + D) {
 				if (lforbid[i]) {
-					LR.push_back(make_pair(
-						firstcrosscircle(manpos, t * human_velocity + D + D,
-										 Lineseg(lp, lq)),
-						0));
+					lfirst[i] = firstcrosscircle(
+						manpos, t * human_velocity + D + D, Lineseg(lp, lq));
 				}
 				lforbid[i] = false;
 
@@ -130,10 +133,8 @@ Point dealthreat(int num, Point v) {
 			if (ptoLinesegdist(manpos, Lineseg(rp, rq), temp) <=
 				t * human_velocity + D + D) {
 				if (rforbid[i]) {
-					LR.push_back(make_pair(
-						firstcrosscircle(manpos, t * human_velocity + D + D,
-										 Lineseg(rp, rq)),
-						1));
+					rfirst[i] = firstcrosscircle(
+						manpos, t * human_velocity + D + D, Lineseg(rp, rq));
 				}
 				rforbid[i] = false;
 
@@ -145,13 +146,38 @@ Point dealthreat(int num, Point v) {
 		}
 	}
 
+	int level = 0;
+	Point base =
+		firstcrosscircle(manpos, human_velocity, Lineseg(manpos, manpos + v));
+
+	// print(base);
 	rep(i, coming[num].size()) {
+		if (lfirst[i] != p0 && rfirst[i] != p0) {
+			if (ptoldist(base, Lineseg(lfirst[i], lsecond[i])) +
+					ptoldist(base, Lineseg(rfirst[i], rsecond[i])) <=
+				fireball_radius + fireball_radius + D)
+				level++;
+		} else {
+			if (rfirst[i] != p0) {
+				if (multiply(rfirst[i], base, rsecond[i]) > 0)
+					level++;
+			}
+			if (lfirst[i] != p0) {
+				if (multiply(lfirst[i], base, lsecond[i]) < 0)
+					level++;
+			}
+		}
+
+		if (lfirst[i] != p0)
+			LR.push_back(make_pair(lfirst[i], 0));
+		if (rfirst[i] != p0)
+			LR.push_back(make_pair(rfirst[i], 1));
 		if (lsecond[i] != p0)
 			LR.push_back(make_pair(lsecond[i], 1));
 		if (rsecond[i] != p0)
 			LR.push_back(make_pair(rsecond[i], 0));
 	}
-
+	// cout << level << '\n';
 	for (auto f : lforbid)
 		lf = lf || f;
 	for (auto f : rforbid)
@@ -164,10 +190,13 @@ Point dealthreat(int num, Point v) {
 
 	center = manpos;
 	dir = v;
-	Point w = v - v - v; // vector
+	Point w = -v; // vector
 	LR.push_back(make_pair(manpos + v, -1));
 	sort(LR.begin(), LR.end(), anglesmall);
 
+	// for (auto x : LR) {
+	// 	print(x.first);
+	// }
 	// if (num == 4) {
 	// 	fstream f("1.txt", ios::app);
 	// 	f << "LR:\n";
@@ -180,7 +209,7 @@ Point dealthreat(int num, Point v) {
 	// }
 
 	// int level = lf ? 1 : 0;
-	int level = coming[num].size();
+	// int level = coming[num].size();
 	for (auto x : LR) {
 		if (x.second == -1 && level == 0) {
 			// if (num == 4) {
@@ -214,7 +243,7 @@ Point dealthreat(int num, Point v) {
 		}
 	}
 	// print(w);
-	if (abs(angle(manpos, manpos + v, manpos + w)) > PI / 2)
+	if (abs(angle(manpos, manpos + v, manpos + w)) > 0.9 * PI)
 		return v;
 	// if (num == 4) {
 	// 	fstream f("1.txt", ios::app);
@@ -225,15 +254,15 @@ Point dealthreat(int num, Point v) {
 
 // int main() {
 // 	logic = Logic::Instance();
-// 	man = Human(0, 204.637, 208.26, 0, 0, 0, 0, 0, 0, 0, 0);
+// 	man = Human(0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 // 	logic->map.faction_number = 2;
 // 	// logic->faction = 0;
-// 	logic->fireballs.push_back(Fireball(206.991, 212.394, -2.232, -1));
+// 	logic->fireballs.push_back(Fireball(1, 18, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(4, 18, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, 0, 1 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, -1, 1 * PI, -1));
 // 	findthreat(4);
-// 	print(dealthreat(4, Point(42.8626, 56.2395)));
+// 	print(dealthreat(4, Point(0, 1)));
 
 // 	return 0;
 // }
