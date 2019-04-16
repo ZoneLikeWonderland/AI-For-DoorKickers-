@@ -14,7 +14,6 @@
 // #include "geometry.cpp"
 // #include "logic.cpp"
 
-
 using namespace std;
 
 int waypoint[MAXN][MAXN];
@@ -96,24 +95,38 @@ inline bool havewalls(Point a, Point b) {
 	return false;
 }
 
-const int reducedist=5;
+int temp[MAXN][MAXN];
+int scale = 2;
+void ReduceMap() {
+	rep(i, map.width) {
+		rep(j, map.height) {
+			if (map.pixels[i][j]) {
+				fx(x, i / scale * scale, i / scale * scale + scale - 1)
+					fx(y, j / scale * scale, j / scale * scale + scale - 1)
+						temp[x][y] = 1;
+			}
+		}
+	}
+}
+
+const int reducedist = 3;
 inline IntPoint StayFarAwayFromWalls(IntPoint P) {
 	int x = round(P.x);
 	int y = round(P.y);
 	int dx = 0, dy = 0;
-	if (inbound(IntPoint(x, y)) && map.pixels[x][y]) {
+	if (inbound(IntPoint(x, y)) && temp[x][y]) {
 		dx -= reducedist;
 		dy -= reducedist;
 	}
-	if (inbound(IntPoint(x - 1, y)) && map.pixels[x - 1][y]) {
+	if (inbound(IntPoint(x - 1, y)) && temp[x - 1][y]) {
 		dx += reducedist;
 		dy -= reducedist;
 	}
-	if (inbound(IntPoint(x, y - 1)) && map.pixels[x][y - 1]) {
+	if (inbound(IntPoint(x, y - 1)) && temp[x][y - 1]) {
 		dx -= reducedist;
 		dy += reducedist;
 	}
-	if (inbound(IntPoint(x - 1, y - 1)) && map.pixels[x - 1][y - 1]) {
+	if (inbound(IntPoint(x - 1, y - 1)) && temp[x - 1][y - 1]) {
 		dx += reducedist;
 		dy += reducedist;
 	}
@@ -121,10 +134,12 @@ inline IntPoint StayFarAwayFromWalls(IntPoint P) {
 }
 
 void initwaypoint() {
-	freopen("err.txt", "w", stderr);
-    
+	// freopen("err.txt", "w", stderr);
+
 	auto t = clock();
-	rep(i, map.width) rep(j, map.height) if (map.pixels[i][j]) {
+	ReduceMap();
+	// rep(i, map.width) rep(j, map.height) if (map.pixels[i][j]) {
+	rep(i, map.width) rep(j, map.height) if (temp[i][j]) {
 		waypoint[i][j]++;
 		waypoint[i + 1][j]++;
 		waypoint[i][j + 1]++;
@@ -134,7 +149,7 @@ void initwaypoint() {
 	invkeypoint.reserve(MAXM);
 	int k = 0;
 	fx(i, 1, map.width - 1) fx(j, 1, map.height - 1) if (waypoint[i][j] == 1) {
-		IntPoint temp=StayFarAwayFromWalls(IntPoint(i,j));
+		IntPoint temp(i, j);
 		keypoint.push_back(temp);
 		invkeypoint[HashIntPoint(temp)] = k++;
 	}
@@ -211,6 +226,9 @@ int Astar(Point s, Point t, Point ROP[]) {
 			}
 		}
 	}
+
+	// cerr << "search time: " << clock() - T << '\t';
+	// cerr << "search times: " << d << '\t';
 	// cout << "done\n";
 	int ROPsize = 0;
 	while (true) {
@@ -221,7 +239,7 @@ int Astar(Point s, Point t, Point ROP[]) {
 		P = keypoint[dad[TEMP[ROPsize - 1]]];
 	}
 	rep(i, ROPsize) {
-		ROP[i] = StayAwayFromWalls(keypoint[TEMP[ROPsize - i - 1]]);
+		ROP[i] = StayFarAwayFromWalls(keypoint[TEMP[ROPsize - i - 1]]);
 	}
 	ROP[ROPsize] = t;
 	// cerr << "Astar time: " << clock() - T << '\n';
