@@ -96,6 +96,30 @@ inline bool havewalls(Point a, Point b) {
 	return false;
 }
 
+const int reducedist=5;
+inline IntPoint StayFarAwayFromWalls(IntPoint P) {
+	int x = round(P.x);
+	int y = round(P.y);
+	int dx = 0, dy = 0;
+	if (inbound(IntPoint(x, y)) && map.pixels[x][y]) {
+		dx -= reducedist;
+		dy -= reducedist;
+	}
+	if (inbound(IntPoint(x - 1, y)) && map.pixels[x - 1][y]) {
+		dx += reducedist;
+		dy -= reducedist;
+	}
+	if (inbound(IntPoint(x, y - 1)) && map.pixels[x][y - 1]) {
+		dx -= reducedist;
+		dy += reducedist;
+	}
+	if (inbound(IntPoint(x - 1, y - 1)) && map.pixels[x - 1][y - 1]) {
+		dx += reducedist;
+		dy += reducedist;
+	}
+	return IntPoint(P.x + dx, P.y + dy);
+}
+
 void initwaypoint() {
 	freopen("err.txt", "w", stderr);
     
@@ -110,8 +134,9 @@ void initwaypoint() {
 	invkeypoint.reserve(MAXM);
 	int k = 0;
 	fx(i, 1, map.width - 1) fx(j, 1, map.height - 1) if (waypoint[i][j] == 1) {
-		keypoint.push_back(IntPoint(i, j));
-		invkeypoint[HashIntPoint(IntPoint(i, j))] = k++;
+		IntPoint temp=StayFarAwayFromWalls(IntPoint(i,j));
+		keypoint.push_back(temp);
+		invkeypoint[HashIntPoint(temp)] = k++;
 	}
 	fx(i, 0, keypoint.size() - 2) fx(j, i + 1, keypoint.size() - 1) {
 		if (!havewalls(keypoint[i], keypoint[j])) {
