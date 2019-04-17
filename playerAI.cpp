@@ -66,7 +66,7 @@ void Decide() {
 	// bonus
 	rep(i, 2) {
 		if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
-			bonus_radius)
+			bonus_radius - human_velocity)
 			state[i] = RushToBonus;
 		else {
 			state[i] = RandomAction;
@@ -171,7 +171,7 @@ void playerAI() {
 
 	Decide();
 	rep(i, 5) Eval(i);
-
+	
 	for (int i = 0; i < 5; i++) {
 		Point mypos = GetUnit(i).position;
 		Point targ = logic->map.birth_places[logic->faction ^ 1][0];
@@ -182,7 +182,7 @@ void playerAI() {
 			if (dist(unit.position, mypos) < dist(targ, mypos))
 				targ = unit.position;
 		}
-		double D = dist(targ, mypos) * 0.05;
+		double D = dist(targ, mypos) * 0.000005;
 		logic->shoot(
 			i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
 		logic->meteor(i, Point(targ.x, targ.y));
