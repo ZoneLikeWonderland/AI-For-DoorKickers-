@@ -22,8 +22,9 @@ extern Human GetUnit(int num);
 extern Logic *logic;
 extern bool isWall(Point v);
 
-const int DangerDist = 20;
-const int DangerFrames = 10;
+const int DangerDist = 18;
+const int DangerFrames = 6;
+const int nD = 10;
 vector<vector<Fireball>> coming(5);
 
 void findthreat(int num) {
@@ -44,7 +45,7 @@ void findthreat(int num) {
 														   sin(x.rotation))));
 				double length = sqrt(Dist * Dist - d * d);
 				if (fireball_velocity * ((d - 3) / human_velocity - 1) <
-					length) {
+					length * 2) {
 					coming[num].push_back(x);
 					// cout<<"is\n";
 					// cout<<x.position.x<<','<<x.position.y<<endl;
@@ -120,26 +121,26 @@ Point dealthreat(int num, Point v) {
 			Point rq = q + r;
 
 			if (ptoLinesegdist(manpos, Lineseg(lp, lq), temp) <=
-				t * human_velocity + D + D) {
+				t * human_velocity - nD * D) {
 				if (lforbid[i]) {
 					lfirst[i] = firstcrosscircle(
-						manpos, t * human_velocity + D + D, Lineseg(lp, lq));
+						manpos, t * human_velocity - nD * D, Lineseg(lp, lq));
 				}
 				lforbid[i] = false;
 
 				lsecond[i] = firstcrosscircle(
-					manpos, t * human_velocity + D + D, Lineseg(lq, lp));
+					manpos, t * human_velocity - nD * D, Lineseg(lq, lp));
 			}
 			if (ptoLinesegdist(manpos, Lineseg(rp, rq), temp) <=
-				t * human_velocity + D + D) {
+				t * human_velocity - nD * D) {
 				if (rforbid[i]) {
 					rfirst[i] = firstcrosscircle(
-						manpos, t * human_velocity + D + D, Lineseg(rp, rq));
+						manpos, t * human_velocity - nD * D, Lineseg(rp, rq));
 				}
 				rforbid[i] = false;
 
 				rsecond[i] = firstcrosscircle(
-					manpos, t * human_velocity + D + D, Lineseg(rq, rp));
+					manpos, t * human_velocity - nD * D, Lineseg(rq, rp));
 			}
 
 			f.position = q;
@@ -155,7 +156,7 @@ Point dealthreat(int num, Point v) {
 		if (lfirst[i] != p0 && rfirst[i] != p0) {
 			if (ptoldist(base, Lineseg(lfirst[i], lsecond[i])) +
 					ptoldist(base, Lineseg(rfirst[i], rsecond[i])) <=
-				fireball_radius + fireball_radius + D)
+				fireball_radius + fireball_radius + 4 * D)
 				level++;
 		} else {
 			if (rfirst[i] != p0) {
@@ -195,7 +196,8 @@ Point dealthreat(int num, Point v) {
 	sort(LR.begin(), LR.end(), anglesmall);
 
 	// for (auto x : LR) {
-	// 	print(x.first);
+	// 	cout << x.first.x - manpos.x << ',' << x.first.y - manpos.y << ' ';
+	// 	cout << x.second << '\n';
 	// }
 	// if (num == 4) {
 	// 	fstream f("1.txt", ios::app);
@@ -208,8 +210,6 @@ Point dealthreat(int num, Point v) {
 	// 	}
 	// }
 
-	// int level = lf ? 1 : 0;
-	// int level = coming[num].size();
 	for (auto x : LR) {
 		if (x.second == -1 && level == 0) {
 			// if (num == 4) {
@@ -243,7 +243,7 @@ Point dealthreat(int num, Point v) {
 		}
 	}
 	// print(w);
-	if (abs(angle(manpos, manpos + v, manpos + w)) > 0.9 * PI)
+	if (abs(angle(manpos, manpos + v, manpos + w)) > 0.95 * PI)
 		return v;
 	// if (num == 4) {
 	// 	fstream f("1.txt", ios::app);
@@ -254,15 +254,15 @@ Point dealthreat(int num, Point v) {
 
 // int main() {
 // 	logic = Logic::Instance();
-// 	man = Human(0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+// 	man = Human(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 // 	logic->map.faction_number = 2;
 // 	// logic->faction = 0;
-// 	logic->fireballs.push_back(Fireball(1, 18, 1.5 * PI, -1));
+// 	logic->fireballs.push_back(Fireball(0, 16, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(4, 18, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, 0, 1 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, -1, 1 * PI, -1));
 // 	findthreat(4);
-// 	print(dealthreat(4, Point(0, 1)));
+// 	print(dealthreat(4, Point(0, -1)));
 
 // 	return 0;
 // }
