@@ -35,7 +35,11 @@ void findthreat(int num) {
 			continue;
 		if (abs(angle(x.position, manpos,
 					  x.position + Point(cos(x.rotation), sin(x.rotation)))) <
-			PI / 2)
+			PI / 2) {
+			if (dist(manpos, x.position) < 2 * fireball_radius) {
+				coming[num].push_back(x);
+				continue;
+			}
 			if (dist(manpos, x.position) < DangerDist) {
 				// when vt+3>d,should u(t-1)>length.(length^2+d^2==dist^2)
 				double Dist = dist(manpos, x.position);
@@ -45,12 +49,13 @@ void findthreat(int num) {
 														   sin(x.rotation))));
 				double length = sqrt(Dist * Dist - d * d);
 				if (fireball_velocity * ((d - 3) / human_velocity - 1) <
-					length * 2) {
+					length + fireball_velocity) {
 					coming[num].push_back(x);
 					// cout<<"is\n";
 					// cout<<x.position.x<<','<<x.position.y<<endl;
 				}
 			}
+		}
 	}
 }
 
@@ -71,21 +76,6 @@ bool anglesmall(pair<Point, int> a, pair<Point, int> b) {
 Point dealthreat(int num, Point v) {
 	if (coming[num].empty())
 		return v;
-	// if (num == 4) {
-	// 	fstream f("1.txt", ios::app);
-	// 	f << "\npos: " << GetUnit(num).position.x << ','
-	// 	  << GetUnit(num).position.y << '\n';
-	// 	f << "old: " << v.x << ',' << v.y << '\n';
-	// 	f << "find\n";
-	// 	for (auto x : coming[num]) {
-	// 		f << x.position.x - GetUnit(num).position.x << ','
-	// 		  << x.position.y - GetUnit(num).position.y << "," << x.rotation
-	// 		  << "  ";
-	// 		f << x.position.x << ',' << x.position.y << "," << x.rotation
-	// 		  << '\n';
-	// 	}
-	// }
-
 	Point manpos = GetUnit(num).position;
 	LR.clear();
 	lforbid.clear();
@@ -104,17 +94,16 @@ Point dealthreat(int num, Point v) {
 	Point temp;
 	rep(t, DangerFrames) {
 		rep(i, coming[num].size()) {
-			// for(auto &f:coming[num]){
 			Fireball &f = coming[num][i];
 			double ro = f.rotation;
-			Point p = f.position;
-			Point q = p + Point(cos(ro) * fireball_velocity,
-								sin(ro) * fireball_velocity);
-
-			Point l = Point(cos(ro - PI / 2) * (fireball_radius + D),
-							sin(ro - PI / 2) * (fireball_radius + D));
-			Point r = Point(cos(ro + PI / 2) * (fireball_radius + D),
-							sin(ro + PI / 2) * (fireball_radius + D));
+			Point p = f.position - Point(cos(ro) * fireball_velocity,
+										 sin(ro) * fireball_velocity);
+			Point q = f.position + Point(cos(ro) * fireball_velocity,
+										 sin(ro) * fireball_velocity);
+			Point l = Point(cos(ro - PI / 2) * (fireball_radius + 15 * D),
+							sin(ro - PI / 2) * (fireball_radius + 15 * D));
+			Point r = Point(cos(ro + PI / 2) * (fireball_radius + 15 * D),
+							sin(ro + PI / 2) * (fireball_radius + 15 * D));
 			Point lp = p + l;
 			Point lq = q + l;
 			Point rp = p + r;
@@ -156,7 +145,7 @@ Point dealthreat(int num, Point v) {
 		if (lfirst[i] != p0 && rfirst[i] != p0) {
 			if (ptoldist(base, Lineseg(lfirst[i], lsecond[i])) +
 					ptoldist(base, Lineseg(rfirst[i], rsecond[i])) <=
-				fireball_radius + fireball_radius + 4 * D)
+				fireball_radius + fireball_radius + 2 * 16 * D)
 				level++;
 		} else {
 			if (rfirst[i] != p0) {
@@ -179,15 +168,6 @@ Point dealthreat(int num, Point v) {
 			LR.push_back(make_pair(rsecond[i], 0));
 	}
 	// cout << level << '\n';
-	for (auto f : lforbid)
-		lf = lf || f;
-	for (auto f : rforbid)
-		rf = rf || f;
-
-	// if (lf)
-	// 	cout << "no left\n";
-	// if (rf)
-	// 	cout << "no right\n";
 
 	center = manpos;
 	dir = v;
@@ -195,31 +175,10 @@ Point dealthreat(int num, Point v) {
 	LR.push_back(make_pair(manpos + v, -1));
 	sort(LR.begin(), LR.end(), anglesmall);
 
-	// for (auto x : LR) {
-	// 	cout << x.first.x - manpos.x << ',' << x.first.y - manpos.y << ' ';
-	// 	cout << x.second << '\n';
-	// }
-	// if (num == 4) {
-	// 	fstream f("1.txt", ios::app);
-	// 	f << "LR:\n";
-	// 	for (auto x : LR) {
-	// 		// print(x.first);
-	// 		f << x.first.x - manpos.x << ',' << x.first.y - manpos.y << ' ';
-	// 		f << x.second << '\n';
-	// 		// cout<<angle(center, center + dir, x.first)<<endl;
-	// 	}
-	// }
-
 	for (auto x : LR) {
 		if (x.second == -1 && level == 0) {
-			// if (num == 4) {
-			// 	fstream f("1.txt", ios::app);
-			// 	f << "No alert\n";
-			// }
 			return v;
 		}
-		// print(x.first);
-		// cout<<level<<'\n';
 		if (x.second == 0) {
 			if (level == 0) {
 				if (!isWall(x.first)) {
@@ -245,10 +204,9 @@ Point dealthreat(int num, Point v) {
 	// print(w);
 	if (abs(angle(manpos, manpos + v, manpos + w)) > 0.95 * PI)
 		return v;
-	// if (num == 4) {
-	// 	fstream f("1.txt", ios::app);
-	// 	f << "new: " << w.x << ',' << w.y << '\n';
-	// }
+	Point W = w / dist(w, Point(0, 0)) * human_velocity;
+	if (!isWall(manpos + W))
+		return W;
 	return w;
 }
 
