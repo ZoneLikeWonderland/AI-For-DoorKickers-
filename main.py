@@ -17,6 +17,7 @@ from MySTL import *
 from multiprocessing import Pool
 import json
 import logging
+import os
 
 BYTEORDER = 'big'
 
@@ -116,6 +117,7 @@ targets = [TargetArea(Point(t[0], t[1])) for t in target_places]
 bonuses = [Bonus(num,Point(t[0],t[1])) for num,t in enumerate(bonus_places)]
 score = [0.0] * faction_number
 
+debugMsgs = ['']*faction_number
 
 def sendLog(log, Type=0, UserCode=-1):
     if DEBUG:
@@ -179,6 +181,7 @@ class Listen(threading.Thread):
         "shoot": [[-1, -1]] * human_number,
         "meteor": [[-1, -1]] * human_number,
         "flash": [False] * human_number,
+        "debug":"",
     }
 
     def __init__(self):
@@ -328,7 +331,7 @@ def flash(human, pos):
 
     pos = Point(pos[0], pos[1])
     if L2Distance(human.pos, pos) <= eps + flash_distance and LegalPos(pos, walls):
-        Ev(9, human.number, human.pos.x, human.pos.y, pos.x, pos.y)
+        Ev(9, human.number, round(human.pos.x,precision), round(human.pos.y,precision), round(pos.x,precision), round(pos.y,precision))
         human.pos = pos
         human.flash_time = human.flash_interval
         human.flash_number -= 1
@@ -377,7 +380,7 @@ def meteor_hurt(meteor, human, hurt_record):
 
 def death(human, hurt_dict):
     human.death_time = frames_of_death
-    Ev(3, human.number, human.pos.x, human.pos.y)
+    Ev(3, human.number, round(human.pos.x,precision), round(human.pos.y,precision))
     score[human.faction] += killed_score
     sum_hurt = 0
     for h_id, hurt in hurt_dict.items():
@@ -483,9 +486,7 @@ def RunGame():
 
         # Rebirth
         for human in humans:
-            if human.death_time > 0:
-                human.death_time -= 1
-            elif human.death_time == 0:
+            if human.death_time == 0:
                 human.reset()
                 human.death_time = -1
                 Ev(8, human.number)
@@ -530,6 +531,13 @@ def RunGame():
                 WriteToLogFile('Player {}:'.format(i), an)
         if DEBUG:
             WriteToLogFile("Listen Succeed")
+
+        for fac,a in enumerate(analysis):
+            if 'debug' in a:
+                if a['debug']!='':
+                    debugMsgs[fac]+='Frames = {}\n'.format(timecnt)
+                    debugMsgs[fac]+=a['debug']
+                    debugMsgs[fac]+='\n\n'
 
         # flash
         for fac, a in enumerate(analysis):
@@ -581,13 +589,13 @@ def RunGame():
 
         hurt_record = [{}] * len(humans)
         for fireball in delFireballs:
-            Ev(6, fireball.pos.x, fireball.pos.y, fireball.from_number)
+            Ev(6, round(fireball.pos.x,precision), round(fireball.pos.y,precision), fireball.from_number)
             for human in humans:
                 fireball_hurt(fireball, human, hurt_record)
             fireballs.remove(fireball)
 
         for meteor in delMeteors:
-            Ev(7, meteor.pos.x, meteor.pos.y, meteor.from_number)
+            Ev(7, round(meteor.pos.x,precision), round(meteor.pos.y,precision), meteor.from_number)
             for human in humans:
                 meteor_hurt(meteor, human, hurt_record)
             meteors.remove(meteor)
@@ -684,11 +692,21 @@ def RunGame():
         replay_dir = "." + os.sep + "Replay" + os.sep
         if not os.path.exists(replay_dir):
             os.mkdir(replay_dir)
+        replay_dir += "replay{}.zip".format(test_num)
     else:
         replay_dir = save_dir
-    replay_name = "replay{}.json".format(test_num)
-    with open(replay_dir + replay_name, "w")as file:
+    name = replay_dir[replay_dir.rfind('/')+1:]
+    Dir = replay_dir[:replay_dir.rfind('/')+1]
+    for i in range(faction_number):
+        with open(Dir+name.replace(".zip","_player{}_debug.txt".format(i)),'w')as file:
+            file.write(debugMsgs[i])
+    with open(Dir+name.replace(".zip",".json"), "w")as file:
         file.write(json.dumps(logs))
+    command = "cd {0} && zip -rq {1} {2} ".format(Dir,name,name.replace(".zip",".json"))
+    for i in range(faction_number):
+        command += name.replace(".zip","_player{}_debug.txt".format(i))+" "
+    command += "&& rm -f *.json *.txt"
+    os.system(command)
     if DEBUG:
         WriteToLogFile("################### Result ###################")
         for i, sc in enumerate(score):
