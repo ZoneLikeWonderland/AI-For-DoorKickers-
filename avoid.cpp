@@ -22,9 +22,9 @@ extern Human GetUnit(int num);
 extern Logic *logic;
 extern bool isWall(Point v);
 
-const int DangerDist = 18;
-const int DangerFrames = 6;
-const int nD = 10;
+const int DangerDist = 21;
+const int DangerFrames = 15;
+const int nD = 610;
 vector<vector<Fireball>> coming(5);
 
 void findthreat(int num) {
@@ -33,6 +33,10 @@ void findthreat(int num) {
 	for (auto x : logic->fireballs) {
 		if (x.from_number % logic->map.faction_number == logic->faction)
 			continue;
+		// if (dist(manpos, x.position) < DangerDist) {
+		// 	coming[num].push_back(x);
+		// }
+		// continue;
 		if (abs(angle(x.position, manpos,
 					  x.position + Point(cos(x.rotation), sin(x.rotation)))) <
 			PI / 2) {
@@ -73,7 +77,7 @@ bool anglesmall(pair<Point, int> a, pair<Point, int> b) {
 }
 
 // pass a vector and return a vector
-Point dealthreat(int num, Point v) {
+Point dealthreat(int num, Point v, double consider = 0.95) {
 	if (coming[num].empty())
 		return v;
 	Point manpos = GetUnit(num).position;
@@ -175,6 +179,8 @@ Point dealthreat(int num, Point v) {
 	LR.push_back(make_pair(manpos + v, -1));
 	sort(LR.begin(), LR.end(), anglesmall);
 
+	// for (auto x : LR) cout<<x.first.x<<","<<x.first.y<<" "<<x.second<<"\n";
+
 	for (auto x : LR) {
 		if (x.second == -1 && level == 0) {
 			return v;
@@ -202,7 +208,8 @@ Point dealthreat(int num, Point v) {
 		}
 	}
 	// print(w);
-	if (abs(angle(manpos, manpos + v, manpos + w)) > 0.95 * PI)
+	if (consider > 0 &&
+		abs(angle(manpos, manpos + v, manpos + w)) > consider * PI)
 		return v;
 	Point W = w / dist(w, Point(0, 0)) * human_velocity;
 	if (!isWall(manpos + W))
@@ -215,7 +222,7 @@ Point dealthreat(int num, Point v) {
 // 	man = Human(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 // 	logic->map.faction_number = 2;
 // 	// logic->faction = 0;
-// 	logic->fireballs.push_back(Fireball(0, 16, 1.5 * PI, -1));
+// 	logic->fireballs.push_back(Fireball(0, 19, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(4, 18, 1.5 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, 0, 1 * PI, -1));
 // 	// logic->fireballs.push_back(Fireball(18, -1, 1 * PI, -1));
