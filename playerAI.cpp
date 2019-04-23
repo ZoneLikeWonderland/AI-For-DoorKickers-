@@ -27,6 +27,8 @@ enum STATE {
 double RandDouble() { return rand() / (double)RAND_MAX; }
 double RandDouble(double L, double R) { return RandDouble() * (R - L) + L; }
 
+Human past5frame[5][5];
+
 // Way search
 using OriginAstar::move_smart;
 extern void initwaypoint();
@@ -37,11 +39,15 @@ Point ROP[MAXM];
 
 // avoid fireball
 extern void findthreat(int num);
-extern Point dealthreat(int num, Point v);
+Point dealthreat(int num, Point v, double consider = 0.95);
+
+// forecast position
+extern Point ForecastPos(int enemy);
+extern Point ForecastFirePos(int enemy, int self);
 
 /* Behavior layer */
 // forward to point
-void Forward(int num, Point dest, bool flash = true) {
+void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 	if (!DONE) {
 		Point step;
 		move_smart(num, dest, step);
@@ -54,7 +60,7 @@ void Forward(int num, Point dest, bool flash = true) {
 		} else {
 			findthreat(num);
 			Point u = ROP[0] - pos;
-			Point v = dealthreat(num, u);
+			Point v = dealthreat(num, u, consider);
 			move_relative(num, v);
 		}
 	}
@@ -144,11 +150,56 @@ void Eval(int num) {
 			vv = RandDouble() * 2 * PI;
 			v = Point(cos(vv), sin(vv)) * human_velocity;
 		} while (isWall(GetUnit(num).position + v));
-		Forward(num, GetUnit(num).position + v, false);
+		Forward(num, GetUnit(num).position + v, false, -1);
 		break;
 	}
 	default:
 		break;
+	}
+}
+
+// shoot where
+Point target[5];
+void Think() {
+	for (int i = 0; i < 5; i++) {
+		Point mypos = GetUnit(i).position;
+		target[i] = Point(-1, -1);
+		bool haveman[2] = {false, false};
+		for (int j = 0; j < 5; j++) {
+			if (dist(GetEnemyUnit(j).position, logic->map.bonus_places[0]) <
+				fireball_radius)
+				haveman[0] = true;
+			if (dist(GetEnemyUnit(j).position, logic->map.bonus_places[1]) <
+				fireball_radius)
+				haveman[1] = true;
+		}
+		if (i < 2) {
+			if (dist(mypos, logic->map.bonus_places[0]) < 80 && haveman[0]) {
+				target[i] = logic->map.bonus_places[0];
+				continue;
+			} else if (dist(mypos, logic->map.bonus_places[1]) < 80 &&
+					   haveman[1]) {
+				target[i] = logic->map.bonus_places[1];
+				continue;
+			}
+		}
+		for (int j = 0; j < 5; j++) {
+			Human unit = GetEnemyUnit(j);
+			if (unit.hp <= 0)
+				continue;
+			if (target[i] == Point(-1, -1) ||
+				dist(unit.position, mypos) < dist(target[i], mypos))
+				target[i] = ForecastFirePos(j, i);
+		}
+	}
+}
+
+void Do() {
+	rep(i, 5) {
+		Point mypos = GetUnit(i).position;
+		double D = dist(target[i], mypos) * 0.000005;
+		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
+							  target[i].y + RandDouble(-D, D)));
 	}
 }
 
@@ -158,6 +209,7 @@ void playerAI() {
 	// ofstream f("1.txt",ios::app);
 
 	logic = Logic::Instance();
+	rep(i, 5) past5frame[logic->frame % 5][i] = GetEnemyUnit(i);
 
 	static bool ONCE = true;
 
@@ -170,22 +222,27 @@ void playerAI() {
 	}
 
 	Decide();
-	rep(i, 5) Eval(i);
-	
-	for (int i = 0; i < 5; i++) {
-		Point mypos = GetUnit(i).position;
-		Point targ = logic->map.birth_places[logic->faction ^ 1][0];
-		for (int j = 0; j < 5; j++) {
-			Human unit = GetEnemyUnit(j);
-			if (unit.hp <= 0)
-				continue;
-			if (dist(unit.position, mypos) < dist(targ, mypos))
-				targ = unit.position;
+	rep(i, 5) 
+	Eval(i);
+	// Forward(4, GetEnemyUnit(0).position, false, -1);
+	Think();
+	Do();
+
+	bool used[5] = {false, false, false, false, false};
+	rep(i, 5) {
+		rep(j, 5) {
+			if (dist(GetUnit(i).position, GetEnemyUnit(j).position) <
+				(meteor_delay * human_velocity) + meteor_distance) {
+				Point target = ForecastPos(j);
+				if (!used[i] && target != Point(-1, -1) &&
+					dist(target, GetUnit(i).position) < meteor_distance) {
+					target.x += RandDouble(-1.5, 1.5);
+					target.y += RandDouble(-1.5, 1.5);
+					logic->meteor(i, target);
+					used[i] = true;
+				}
+			}
 		}
-		double D = dist(targ, mypos) * 0.000005;
-		logic->shoot(
-			i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
-		logic->meteor(i, Point(targ.x, targ.y));
 	}
 
 	// rep(i,5)f<<state[i]<<' ';f<<'\n';
