@@ -37,11 +37,11 @@ Point ROP[MAXM];
 
 // avoid fireball
 extern void findthreat(int num);
-extern Point dealthreat(int num, Point v);
+extern Point dealthreat(int num, Point v, double consider = 0.95);
 
 /* Behavior layer */
 // forward to point
-void Forward(int num, Point dest, bool flash = true) {
+void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 	if (!DONE) {
 		Point step;
 		move_smart(num, dest, step);
@@ -54,7 +54,7 @@ void Forward(int num, Point dest, bool flash = true) {
 		} else {
 			findthreat(num);
 			Point u = ROP[0] - pos;
-			Point v = dealthreat(num, u);
+			Point v = dealthreat(num, u, consider);
 			move_relative(num, v);
 		}
 	}
@@ -144,7 +144,7 @@ void Eval(int num) {
 			vv = RandDouble() * 2 * PI;
 			v = Point(cos(vv), sin(vv)) * human_velocity;
 		} while (isWall(GetUnit(num).position + v));
-		Forward(num, GetUnit(num).position + v, false);
+		Forward(num, GetUnit(num).position + v, false, -1);
 		break;
 	}
 	default:
@@ -171,7 +171,7 @@ void playerAI() {
 
 	Decide();
 	rep(i, 5) Eval(i);
-	
+
 	for (int i = 0; i < 5; i++) {
 		Point mypos = GetUnit(i).position;
 		Point targ = logic->map.birth_places[logic->faction ^ 1][0];
