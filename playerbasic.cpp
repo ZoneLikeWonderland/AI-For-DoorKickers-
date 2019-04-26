@@ -2,6 +2,9 @@
 #include "geometry.h"
 #include "logic.h"
 
+#define fx(i, a, b) for (register int i = a; i <= (int)b; i++)
+#define rep(i, N) for (register int i = 0; i < (int)N; i++)
+
 Logic * logic;
 
 int node_retranslate(int faction,int num)
@@ -95,4 +98,16 @@ void flash_s(int num, Point v)
     v.x-=pos.x;
     v.y-=pos.y;
     flash_relative(num,v);
+}
+
+int GetNearestEnemy(int self){
+    int ans=-1;
+    Point mypos=GetUnit(self).position;
+    rep(j,5){
+        if(GetEnemyUnit(j).hp<=0)
+        continue;
+        if(ans==-1||dist(mypos,GetEnemyUnit(j).position)<dist(mypos,GetEnemyUnit(ans).position))
+        ans=j;
+    }
+    return ans;
 }
