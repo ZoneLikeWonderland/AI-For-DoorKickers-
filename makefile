@@ -1,10 +1,10 @@
 all: main.out
 
-main.out: makefile main.o logic.h logic.o const.h avoid.cpp waypoint.cpp playerAI.h playerAI.cpp  jsoncpp/json/json-forwards.h jsoncpp/json/json.h jsoncpp/jsoncpp.cpp geometry.o geometry.h 
+main.out: makefile main.o logic.h logic.o const.h forecast.cpp avoid.cpp waypoint.cpp playerAI.h playerAI.cpp  jsoncpp/json/json-forwards.h jsoncpp/json/json.h jsoncpp/jsoncpp.cpp geometry.o geometry.h 
 ifeq ($(OS),Windows_NT)
-	g++ main.o logic.o avoid.cpp waypoint.cpp playerAI.cpp jsoncpp/jsoncpp.cpp geometry.o -o main.out -D_GLIBCXX_USE_CXX11_ABI=0 -static-libstdc++ -lwsock32 -std=c++11 -O2
+	g++ main.o logic.o forecast.cpp avoid.cpp waypoint.cpp playerAI.cpp jsoncpp/jsoncpp.cpp geometry.o -o main.out -D_GLIBCXX_USE_CXX11_ABI=0 -static-libstdc++ -lwsock32 -std=c++11 -O2
 else
-	g++ main.o logic.o avoid.cpp waypoint.cpp playerAI.cpp jsoncpp/jsoncpp.cpp geometry.o -o main.out -D_GLIBCXX_USE_CXX11_ABI=0 -static-libstdc++ -std=c++11 -pthread -O2
+	g++ main.o logic.o forecast.cpp avoid.cpp waypoint.cpp playerAI.cpp jsoncpp/jsoncpp.cpp geometry.o -o main.out -D_GLIBCXX_USE_CXX11_ABI=0 -static-libstdc++ -std=c++11 -pthread -O2
 endif
 
 logic.o: makefile const.h playerAI.h geometry.h logic.h jsoncpp/json/json-forwards.h jsoncpp/json/json.h logic.cpp
