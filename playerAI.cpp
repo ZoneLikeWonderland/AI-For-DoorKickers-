@@ -5,6 +5,7 @@
 #include <ctime>
 #include <fstream>
 #include <queue>
+#include <sstream>
 #include <thread>
 
 #include "Astar.cpp"
@@ -21,8 +22,13 @@ enum STATE {
 	RushToBonus,
 	ProtectCrystal,
 	WanderBouns,
-	RandomAction
+	RandomAction,
+	FollowEnemy
 } state[5];
+
+string STATEstr[] = {"RushToCrystal", "RushToEnemyTarget", "BackToOurTarget",
+					 "RushToBonus",   "ProtectCrystal",	"WanderBouns",
+					 "RandomAction",  "FollowEnemy"};
 
 double RandDouble() { return rand() / (double)RAND_MAX; }
 double RandDouble(double L, double R) { return RandDouble() * (R - L) + L; }
@@ -42,7 +48,7 @@ extern void findthreat(int num);
 extern Point dealthreat(int num, Point v, double consider = 0.95);
 
 // forecast position
-extern Point ForecastPos(int enemy);
+extern Point ForecastPos(int enemy, double consider = 0.8);
 extern Point ForecastFirePos(int enemy, int self);
 
 /* Behavior layer */
@@ -71,11 +77,24 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 void Decide() {
 	// bonus
 	rep(i, 2) {
-		if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
-			bonus_radius - human_velocity)
+		if (dist(GetUnit(i).position,
+				 GetEnemyUnit(GetNearestEnemy(i)).position) < splash_radius)
+			state[i] = FollowEnemy;
+		else if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
+				 bonus_radius - human_velocity)
 			state[i] = RushToBonus;
 		else {
 			state[i] = RandomAction;
+			rep(j, 5) if (dist(GetEnemyUnit(j).position,
+							   logic->map.bonus_places[i & 1]) <
+							  meteor_delay * human_velocity + meteor_distance &&
+						  dist(GetEnemyUnit(j).position,
+							   logic->map.bonus_places[i & 1]) >
+							  meteor_distance - explode_radius &&
+						  GetEnemyUnit(j).flash_time < meteor_delay) {
+				state[i] = WanderBouns;
+				break;
+			}
 		}
 	}
 
@@ -143,6 +162,16 @@ void Eval(int num) {
 			Forward(num, logic->map.target_places[logic->faction], false);
 		}
 		break;
+	case WanderBouns: {
+		double vv;
+		Point v;
+		do {
+			vv = RandDouble() * 2 * PI;
+			v = Point(cos(vv), sin(vv)) * human_velocity;
+		} while (isWall(GetUnit(num).position + v));
+		Forward(num, GetUnit(num).position + v, false, -1);
+		break;
+	}
 	case RandomAction: {
 		double vv;
 		Point v;
@@ -153,7 +182,10 @@ void Eval(int num) {
 		Forward(num, GetUnit(num).position + v, false, -1);
 		break;
 	}
-	default:
+	case FollowEnemy:
+		// Forward(num, GetEnemyUnit(GetNearestEnemy(num)).position, true, -1);
+		move_relative(num, GetEnemyUnit(GetNearestEnemy(num)).position -
+							   GetUnit(num).position);
 		break;
 	}
 }
@@ -161,23 +193,22 @@ void Eval(int num) {
 Point target[5];
 void Think() {
 	for (int i = 0; i < 5; i++) {
+		target[i] = Point(-1, -1);
+		if (state[i] == WanderBouns)
+			continue;
 		Point mypos = GetUnit(i).position;
-		target[i] = logic->map.birth_places[logic->faction ^ 1][0];
-		for (int j = 0; j < 5; j++) {
-			Human unit = GetEnemyUnit(j);
-			if (unit.hp <= 0)
-				continue;
-			if (dist(unit.position, mypos) < dist(target[i], mypos))
-				target[i] = ForecastFirePos(j, i);
-		}
+		int nearest = GetNearestEnemy(i);
+		target[i] = ForecastFirePos(nearest, i);
 	}
 }
 
 void playerAI() {
+	stringstream ss;
 	auto t0 = clock();
 	auto t = t0;
 
 	logic = Logic::Instance();
+	rep(i, 5) past5frame[logic->frame % 5][i] = GetEnemyUnit(i);
 
 	static bool ONCE = true;
 
@@ -194,7 +225,9 @@ void playerAI() {
 
 	Think();
 	rep(i, 5) {
-		double D = 1;
+		if (state[i] == WanderBouns)
+			continue;
+		double D = 3;
 		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
 							  target[i].y + RandDouble(-D, D)));
 	}
@@ -203,16 +236,21 @@ void playerAI() {
 	rep(i, 5) {
 		rep(j, 5) {
 			if (dist(GetUnit(i).position, GetEnemyUnit(j).position) <
-				(meteor_delay * human_velocity) + meteor_distance) {
-				Point target = ForecastPos(j);
+				(meteor_delay * human_velocity) + meteor_distance -
+					(i < 2 ? 2 : 0)) {
+				Point target =
+					ForecastPos(j, (state[i] == WanderBouns ? 1 : 0.8));
+				target.x += RandDouble(-.5, .5);
+				target.y += RandDouble(-.5, .5);
 				if (!used[i] && target != Point(-1, -1) &&
 					dist(target, GetUnit(i).position) < meteor_distance) {
-					target.x += RandDouble(-1.5, 1.5);
-					target.y += RandDouble(-1.5, 1.5);
 					logic->meteor(i, target);
 					used[i] = true;
 				}
 			}
 		}
 	}
+
+	rep(i, 5) ss << i << ": " << STATEstr[state[i]] << "  ";
+	logic->debug(ss.str());
 }
