@@ -27,27 +27,35 @@ extern int Astar(Point s, Point t, Point ROP[]);
 
 Point ROP2[MAXM];
 
-Point ForecastPos(int enemy) {
+Point ForecastPos(int enemy, double consider = 0.8) {
 	if (GetEnemyUnit(enemy).flash_time < meteor_delay)
 		return Point(-1, -1);
 	Point manpos = GetEnemyUnit(enemy).position;
 	Point dest;
-	if (dist(manpos, logic->map.bonus_places[0]) < meteor_delay * human_velocity) {
+	if (dist(manpos, logic->map.bonus_places[0]) <
+		meteor_delay * human_velocity + meteor_distance) {
 		dest = logic->map.bonus_places[0];
-		return dest;
-	} else if (dist(manpos, logic->map.bonus_places[1]) < meteor_delay * human_velocity) {
+		if (dist(manpos, logic->map.bonus_places[0]) <
+			meteor_delay * human_velocity)
+			return dest;
+	} else if (dist(manpos, logic->map.bonus_places[1]) <
+			   meteor_delay * human_velocity + meteor_distance) {
 		dest = logic->map.bonus_places[1];
-		return dest;
-	} else if (abs(angle(
-				   past5frame[(logic->frame - 4) % 5][enemy].position, manpos,
-				   logic->map.target_places[logic->faction ^ 1])) < PI / 2) {
-		dest = logic->map.target_places[logic->faction ^ 1];
+		if (dist(manpos, logic->map.bonus_places[1]) <
+			meteor_delay * human_velocity)
+			return dest;
 	} else {
-		dest = logic->map.target_places[logic->faction];
+		if (abs(angle(past5frame[(logic->frame - 4) % 5][enemy].position,
+					  manpos, logic->map.target_places[logic->faction ^ 1])) <
+			PI / 2) {
+			dest = logic->map.target_places[logic->faction ^ 1];
+		} else {
+			dest = logic->map.target_places[logic->faction];
+		}
 	}
 	int roplen = Astar(manpos, dest, ROP2);
 	Point u = ROP2[0] - manpos;
-	u = u / dist(u, Point(0, 0)) * (meteor_delay * human_velocity * 0.9);
+	u = u / dist(u, Point(0, 0)) * (meteor_delay * human_velocity * consider);
 	return manpos + u;
 }
 
@@ -71,7 +79,7 @@ Point ForecastFirePos(int enemy, int self) {
 	// 	dest = logic->map.target_places[logic->faction];
 	// int roplen = Astar(manpos, dest, ROP2);
 	// Point u = ROP2[0] - manpos;
-	Point u=manpos-past5frame[(logic->frame - 4) % 5][enemy].position;
+	Point u = manpos - past5frame[(logic->frame - 4) % 5][enemy].position;
 	double dis = dist(manpos, GetUnit(self).position);
 	double co = cos(angle(manpos, manpos + u, GetUnit(self).position));
 	double t = (2 * human_velocity * dis * co -
