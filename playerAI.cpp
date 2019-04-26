@@ -158,6 +158,21 @@ void Eval(int num) {
 	}
 }
 
+Point target[5];
+void Think() {
+	for (int i = 0; i < 5; i++) {
+		Point mypos = GetUnit(i).position;
+		target[i] = logic->map.birth_places[logic->faction ^ 1][0];
+		for (int j = 0; j < 5; j++) {
+			Human unit = GetEnemyUnit(j);
+			if (unit.hp <= 0)
+				continue;
+			if (dist(unit.position, mypos) < dist(target[i], mypos))
+				target[i] = ForecastFirePos(j, i);
+		}
+	}
+}
+
 void playerAI() {
 	auto t0 = clock();
 	auto t = t0;
@@ -177,20 +192,11 @@ void playerAI() {
 	Decide();
 	rep(i, 5) Eval(i);
 
-	for (int i = 0; i < 5; i++) {
-		Point mypos = GetUnit(i).position;
-		Point targ = logic->map.birth_places[logic->faction ^ 1][0];
-		for (int j = 0; j < 5; j++) {
-			Human unit = GetEnemyUnit(j);
-			if (unit.hp <= 0)
-				continue;
-			if (dist(unit.position, mypos) < dist(targ, mypos))
-				targ = unit.position;
-		}
-		double D = dist(targ, mypos) * 0.000005;
-		logic->shoot(
-			i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
-		// logic->meteor(i, Point(targ.x, targ.y));
+	Think();
+	rep(i, 5) {
+		double D = 1;
+		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
+							  target[i].y + RandDouble(-D, D)));
 	}
 
 	bool used[5] = {false, false, false, false, false};
@@ -209,5 +215,4 @@ void playerAI() {
 			}
 		}
 	}
-	
 }
