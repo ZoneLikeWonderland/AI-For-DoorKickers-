@@ -27,6 +27,8 @@ enum STATE {
 double RandDouble() { return rand() / (double)RAND_MAX; }
 double RandDouble(double L, double R) { return RandDouble() * (R - L) + L; }
 
+Human past5frame[5][5];
+
 // Way search
 using OriginAstar::move_smart;
 extern void initwaypoint();
@@ -38,6 +40,10 @@ Point ROP[MAXM];
 // avoid fireball
 extern void findthreat(int num);
 extern Point dealthreat(int num, Point v, double consider = 0.95);
+
+// forecast position
+extern Point ForecastPos(int enemy);
+extern Point ForecastFirePos(int enemy, int self);
 
 /* Behavior layer */
 // forward to point
@@ -155,7 +161,6 @@ void Eval(int num) {
 void playerAI() {
 	auto t0 = clock();
 	auto t = t0;
-	// ofstream f("1.txt",ios::app);
 
 	logic = Logic::Instance();
 
@@ -185,9 +190,24 @@ void playerAI() {
 		double D = dist(targ, mypos) * 0.000005;
 		logic->shoot(
 			i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
-		logic->meteor(i, Point(targ.x, targ.y));
+		// logic->meteor(i, Point(targ.x, targ.y));
 	}
 
-	// rep(i,5)f<<state[i]<<' ';f<<'\n';
-	// f<<"sum:"<<clock()-t0<<'\n';
+	bool used[5] = {false, false, false, false, false};
+	rep(i, 5) {
+		rep(j, 5) {
+			if (dist(GetUnit(i).position, GetEnemyUnit(j).position) <
+				(meteor_delay * human_velocity) + meteor_distance) {
+				Point target = ForecastPos(j);
+				if (!used[i] && target != Point(-1, -1) &&
+					dist(target, GetUnit(i).position) < meteor_distance) {
+					target.x += RandDouble(-1.5, 1.5);
+					target.y += RandDouble(-1.5, 1.5);
+					logic->meteor(i, target);
+					used[i] = true;
+				}
+			}
+		}
+	}
+	
 }
