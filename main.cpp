@@ -97,7 +97,7 @@ void readMap() {
 		Point p(ball_places_raw[i][0].asDouble(), ball_places_raw[i][1].asDouble());
 		ball_places.push_back(p);
 	}
-	
+
 	Json::Value target_places_raw = root["target_places"];
 	vector<Point> target_places;
 	for (int i = 0; i < target_places_raw.size(); i++) {
@@ -216,7 +216,7 @@ void sendMessage(bool gameover = false) {
 			p.append(ope.shoot[i].x);
 			p.append(ope.shoot[i].y);
 			shoot.append(p);
-		}		
+		}
 		Json::Value meteor;
 		for (int i = 0; i < ope.meteor.size(); i++) {
 			Json::Value p;
@@ -228,11 +228,14 @@ void sendMessage(bool gameover = false) {
 		for (int i = 0; i < ope.flash.size(); i++) {
 			flash.append(Json::Value(ope.flash[i]));
 		}
+		Json::Value debug = Json::Value(Logic::Instance()->debugMsg.substr(0, 1024));
+
 		message["flag"] = 0;
 		message["move"] = move;
 		message["shoot"] = shoot;
 		message["meteor"] = meteor;
 		message["flash"] = flash;
+		message["debug"] = debug;
 	}
 	else {
 		message["flag"] = 2;
@@ -249,7 +252,7 @@ void sendMessage(bool gameover = false) {
 	for (int i = 0; i < 4; i++) {
 		printf("%c", lenb[3 - i]);
 	}
-	
+
 	printf("%s", writer.write(message).c_str());
 	cout.flush();
 }
@@ -275,7 +278,7 @@ void keepread() {
 	while (true) {
 		scanf("%4c", lenr);
 		len = (unsigned int)((((unsigned int)lenr[3]) & 255) | ((((unsigned int)lenr[2]) & 255) << 8) | ((((unsigned int)lenr[1]) & 255) << 16) | ((((unsigned int)lenr[0]) & 255) << 24));
-		
+
 		if (len > jsonlen) {
 			while (jsonlen <= len) {
 				jsonlen *= 2;
@@ -379,7 +382,7 @@ int main() {
 	scanf("%4c", lenr);
 
 	len = (unsigned int)((((unsigned int)lenr[3]) & 255) | ((((unsigned int)lenr[2]) & 255) << 8) | ((((unsigned int)lenr[1]) & 255) << 16) | ((((unsigned int)lenr[0]) & 255) << 24));
-	
+
 	getfile(len);
 	readMap();
 
