@@ -2,6 +2,7 @@
 #include "playerbasic.cpp"
 #include <algorithm>
 #include <cstring>
+#include <sstream>
 #include <ctime>
 #include <fstream>
 #include <queue>
@@ -204,6 +205,7 @@ void Do() {
 }
 
 void playerAI() {
+	stringstream dbg;
 	auto t0 = clock();
 	auto t = t0;
 	// ofstream f("1.txt",ios::app);
@@ -224,9 +226,15 @@ void playerAI() {
 	Decide();
 	rep(i, 5) 
 	Eval(i);
-	// Forward(4, GetEnemyUnit(0).position, false, -1);
+
+	dbg<<"WayCost:"<<double(clock()-t)/(double)CLOCKS_PER_SEC;
+	t=clock();
+
 	Think();
 	Do();
+
+	dbg<<" ShootCost:"<<double(clock()-t)/(double)CLOCKS_PER_SEC;
+	t=clock();
 
 	bool used[5] = {false, false, false, false, false};
 	rep(i, 5) {
@@ -245,6 +253,15 @@ void playerAI() {
 		}
 	}
 
+	dbg<<" MeteorCost:"<<double(clock()-t)/(double)CLOCKS_PER_SEC;
+
+	dbg<<" TotalCost:"<<double(clock()-t0)/(double)CLOCKS_PER_SEC;
+	dbg<<" MoveDecision:"<<logic->ope.move[0].x<<','<<logic->ope.move[0].y<<' '
+		<<logic->ope.move[1].x<<','<<logic->ope.move[1].y<<' '
+		<<logic->ope.move[2].x<<','<<logic->ope.move[2].y<<' '
+		<<logic->ope.move[3].x<<','<<logic->ope.move[3].y<<' '
+		<<logic->ope.move[4].x<<','<<logic->ope.move[4].y<<' ';
+	logic->debug(dbg.str());
 	// rep(i,5)f<<state[i]<<' ';f<<'\n';
 	// f<<"sum:"<<clock()-t0<<'\n';
 }
