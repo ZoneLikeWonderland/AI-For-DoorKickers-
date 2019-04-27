@@ -22,9 +22,9 @@ extern Human GetUnit(int num);
 extern Logic *logic;
 extern bool isWall(Point v);
 
-const int DangerDist = 21;
+const int DangerDist = 22;
 const int DangerFrames = 15;
-const int nD = 610;
+const int nD = 650;
 vector<vector<Fireball>> coming(5);
 
 void findthreat(int num) {

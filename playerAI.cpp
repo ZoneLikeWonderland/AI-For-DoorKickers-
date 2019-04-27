@@ -73,6 +73,7 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 }
 
 /* Character layer */
+int MainRole = 2;
 // state decide
 void Decide() {
 	// bonus
@@ -102,15 +103,15 @@ void Decide() {
 	if (logic->crystal[logic->faction ^ 1].belong == -1) {
 		fx(i, 2, 4) { state[i] = RushToCrystal; }
 	} else {
+		MainRole = node_retranslate(logic->faction,
+									logic->crystal[logic->faction ^ 1].belong);
 		if (dist(logic->crystal[logic->faction ^ 1].position,
 				 logic->map.target_places[logic->faction]) <
 			dist(logic->crystal[logic->faction ^ 1].position,
 				 logic->map.target_places[logic->faction ^ 1]) *
 				0.6) {
 			fx(i, 2, 4) {
-				if (node_retranslate(
-						logic->faction,
-						logic->crystal[logic->faction ^ 1].belong) == i) {
+				if (MainRole == i) {
 					state[i] = BackToOurTarget;
 				} else {
 					state[i] = RushToEnemyTarget;
@@ -118,9 +119,7 @@ void Decide() {
 			}
 		} else {
 			fx(i, 2, 4) {
-				if (node_retranslate(
-						logic->faction,
-						logic->crystal[logic->faction ^ 1].belong) == i) {
+				if (MainRole == i) {
 					state[i] = BackToOurTarget;
 				} else {
 					state[i] = ProtectCrystal;
@@ -132,12 +131,8 @@ void Decide() {
 
 // state evaluate
 void Eval(int num) {
-	if (num == 3 &&
-		dist(GetUnit(3).position, GetUnit(2).position) < splash_radius)
-		state[num] = RandomAction;
-	if (num == 4 &&
-		(dist(GetUnit(4).position, GetUnit(2).position) < splash_radius ||
-		 dist(GetUnit(4).position, GetUnit(3).position) < splash_radius))
+	if (num >= 2 && MainRole != num && GetUnit(MainRole).hp > 0 &&
+		dist(GetUnit(num).position, GetUnit(MainRole).position) < splash_radius)
 		state[num] = RandomAction;
 
 	switch (state[num]) {
@@ -227,7 +222,7 @@ void playerAI() {
 	rep(i, 5) {
 		if (state[i] == WanderBouns)
 			continue;
-		double D = 3;
+		double D = 5;
 		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
 							  target[i].y + RandDouble(-D, D)));
 	}
