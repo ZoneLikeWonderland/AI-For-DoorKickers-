@@ -1,6 +1,7 @@
 #include "playerAI.h"
 #include "playerbasic.cpp"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -185,7 +186,7 @@ void Eval(int num) {
 	}
 }
 
-Point target[5];
+Point target[10];
 void Think() {
 	for (int i = 0; i < 5; i++) {
 		target[i] = Point(-1, -1);
@@ -203,6 +204,9 @@ void playerAI() {
 	auto t = t0;
 
 	logic = Logic::Instance();
+	ss << logic->frame << "@";
+	logic->debug(ss.str());
+
 	rep(i, 5) past5frame[logic->frame % 5][i] = GetEnemyUnit(i);
 
 	static bool ONCE = true;
@@ -215,17 +219,63 @@ void playerAI() {
 		srand(time(NULL));
 	}
 
+	ss << " $init " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
+
 	Decide();
+
+	ss << "$decide " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
+
 	rep(i, 5) Eval(i);
 
+	ss << "$eval " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
+
 	Think();
+
+	ss << "$think " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
+
 	rep(i, 5) {
-		if (state[i] == WanderBouns)
+		// if (state[i] == WanderBouns)
+		// 	continue;
+		if (target[i] == Point(-1, -1) || target[i].x < 0 || target[i].y < 0 ||
+			target[i].x > 320 || target[i].y > 320 || !isnormal(target[i].x) ||
+			!isnormal(target[i].y)) {
+			logic->shoot(i, Point(RandDouble(0, 320), RandDouble(0, 320)));
 			continue;
-		double D = 5;
-		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
-							  target[i].y + RandDouble(-D, D)));
+		}
+		// double D = 5;
+		// logic->s+ RandDouble(-D, D)));
+		logic->shoot(i, target[i]);
+		// ofstream f("1.txt",ios::app);
+		// f<<target[i].x<<','<<target[i].y<<'\n';
+		// logic->shoot(i, Point(RandDouble(0, 320), RandDouble(0, 320)));
 	}
+
+	// for (int i = 0; i < 5; i++) {
+	// 	Point mypos = GetUnit(i).position;
+	// 	Point targ = logic->map.birth_places[logic->faction ^ 1][0];
+	// 	for (int j = 0; j < 5; j++) {
+	// 		Human unit = GetEnemyUnit(j);
+	// 		if (unit.hp <= 0)
+	// 			continue;
+	// 		if (dist(unit.position, mypos) < dist(targ, mypos))
+	// 			targ = unit.position;
+	// 	}
+	// 	double D = dist(targ, mypos) * 0.2;
+	// 	logic->shoot(
+	// 		i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
+	// }
+
+	ss << "$shoot " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
 
 	bool used[5] = {false, false, false, false, false};
 	rep(i, 5) {
@@ -245,6 +295,10 @@ void playerAI() {
 			}
 		}
 	}
+
+	ss << "$meteor " << clock() - t << " ";
+	t = clock();
+	logic->debug(ss.str());
 
 	rep(i, 5) ss << i << ": " << STATEstr[state[i]] << "  ";
 	logic->debug(ss.str());
