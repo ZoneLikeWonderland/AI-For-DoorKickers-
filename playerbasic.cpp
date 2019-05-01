@@ -100,11 +100,11 @@ void flash_s(int num, Point v)
     flash_relative(num,v);
 }
 
-int GetNearestEnemy(int self){
+int GetNearestEnemy(int self,bool GetDeath=false){
     int ans=-1;
     Point mypos=GetUnit(self).position;
     rep(j,5){
-        if(GetEnemyUnit(j).hp<=0)
+        if(GetEnemyUnit(j).hp<=0&&!GetDeath)
         continue;
         if(ans==-1||dist(mypos,GetEnemyUnit(j).position)<dist(mypos,GetEnemyUnit(ans).position))
         ans=j;
