@@ -24,7 +24,7 @@ extern bool isWall(Point v);
 
 const int DangerDist = 22;
 const int DangerFrames = 15;
-const int nD = 650;
+const int nD = 660;
 vector<vector<Fireball>> coming(5);
 
 void findthreat(int num) {
@@ -33,10 +33,10 @@ void findthreat(int num) {
 	for (auto x : logic->fireballs) {
 		if (x.from_number % logic->map.faction_number == logic->faction)
 			continue;
-		// if (dist(manpos, x.position) < DangerDist) {
-		// 	coming[num].push_back(x);
-		// }
-		// continue;
+		if (dist(manpos, x.position) < DangerDist) {
+			coming[num].push_back(x);
+			continue;
+		}
 		if (abs(angle(x.position, manpos,
 					  x.position + Point(cos(x.rotation), sin(x.rotation)))) <
 			PI / 2) {
@@ -52,6 +52,8 @@ void findthreat(int num) {
 					Lineseg(x.position, x.position + Point(cos(x.rotation),
 														   sin(x.rotation))));
 				double length = sqrt(Dist * Dist - d * d);
+				if (length != length)
+					length = Dist;
 				if (fireball_velocity * ((d - 3) / human_velocity - 1) <
 					length + fireball_velocity) {
 					coming[num].push_back(x);
