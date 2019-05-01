@@ -27,6 +27,18 @@ extern int Astar(Point s, Point t, Point ROP[]);
 
 Point ROP2[MAXM];
 
+Point GetRopPos(Point pos, int RopLen, Point ROP[], double d) {
+	Point pre = pos;
+	fx(i, 0, RopLen) {
+		if (dist(pre, ROP[i]) >= d) {
+			return pre + (ROP[i] - pre) / dist(pre, ROP[i]) * d;
+		}
+		d -= dist(pre, ROP[i]);
+		pre = ROP[i];
+	}
+	return Point(-1, -1);
+}
+
 Point ForecastPos(int enemy, double consider = 0.8) {
 	if (GetEnemyUnit(enemy).flash_time < meteor_delay)
 		return Point(-1, -1);
@@ -54,9 +66,11 @@ Point ForecastPos(int enemy, double consider = 0.8) {
 		}
 	}
 	int roplen = Astar(manpos, dest, ROP2);
-	Point u = ROP2[0] - manpos;
-	u = u / dist(u, Point(0, 0)) * (meteor_delay * human_velocity * consider);
-	return manpos + u;
+	// Point u = ROP2[0] - manpos;
+	// u = u / dist(u, Point(0, 0)) * (meteor_delay * human_velocity *
+	// consider); return manpos + u;
+	return GetRopPos(manpos, roplen, ROP2,
+					 meteor_delay * human_velocity * consider);
 }
 
 const int disttobonus = 90;
@@ -91,7 +105,8 @@ Point ForecastFirePos(int enemy, int self) {
 			   2 /
 			   (human_velocity * human_velocity -
 				fireball_velocity * fireball_velocity);
-
+	if (t != t)
+		return manpos;
 	u = u / dist(u, Point(0, 0)) * (t * human_velocity);
 	return manpos + u;
 }
