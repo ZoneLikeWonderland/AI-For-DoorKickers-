@@ -22,14 +22,18 @@ enum STATE {
 	BackToOurTarget,
 	RushToBonus,
 	ProtectCrystal,
-	WanderBouns,
+	// WanderBouns,
 	RandomAction,
-	FollowEnemy
+	FollowEnemy,
+	RandomButStayAway
 } state[5];
 
+const int DontShoot = 1 << 0;
+int ExtraState[5];
+
 string STATEstr[] = {"RushToCrystal", "RushToEnemyTarget", "BackToOurTarget",
-					 "RushToBonus",   "ProtectCrystal",	"WanderBouns",
-					 "RandomAction",  "FollowEnemy"};
+					 "RushToBonus",   "ProtectCrystal", //	"WanderBouns",
+					 "RandomAction",  "FollowEnemy",	   "RandomButStayAway"};
 
 double RandDouble() { return rand() / (double)RAND_MAX; }
 double RandDouble(double L, double R) { return RandDouble() * (R - L) + L; }
@@ -63,7 +67,7 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 		Point pos = GetUnit(num).position;
 		int roplen = Astar(pos, dest, ROP);
 		if (canflash(num) && flash) {
-			flash_s(num, bestjump(roplen, ROP, pos, human_velocity));
+			flash_s(num, bestjump(roplen, ROP, pos, flash_distance));
 		} else {
 			findthreat(num);
 			Point u = ROP[0] - pos;
@@ -77,26 +81,36 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 int MainRole = 2;
 // state decide
 void Decide() {
+	rep(i, 5) ExtraState[i] = 0;
 	// bonus
 	rep(i, 2) {
-		if (dist(GetUnit(i).position,
-				 GetEnemyUnit(GetNearestEnemy(i)).position) < splash_radius)
+		int edid = GetNearestEnemy(i, true);
+		int eid = GetNearestEnemy(i);
+		if (dist(GetUnit(i).position, GetEnemyUnit(edid).position) <
+				meteor_distance &&
+			GetEnemyUnit(edid).meteor_time <
+				human_meteor_interval - meteor_delay + 7 &&
+			GetEnemyUnit(edid).meteor_time >=
+				human_meteor_interval - meteor_delay - 1 &&
+			dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) <
+				bonus_radius) {
+			state[i] = RandomButStayAway;
+		} else if (dist(GetUnit(i).position, GetEnemyUnit(eid).position) <
+				   splash_radius)
 			state[i] = FollowEnemy;
 		else if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
 				 bonus_radius - human_velocity)
 			state[i] = RushToBonus;
 		else {
 			state[i] = RandomAction;
-			rep(j, 5) if (dist(GetEnemyUnit(j).position,
-							   logic->map.bonus_places[i & 1]) <
-							  meteor_delay * human_velocity + meteor_distance &&
-						  dist(GetEnemyUnit(j).position,
-							   logic->map.bonus_places[i & 1]) >
-							  meteor_distance - explode_radius &&
-						  GetEnemyUnit(j).flash_time < meteor_delay) {
-				state[i] = WanderBouns;
-				break;
-			}
+		}
+		if (dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) <
+				(meteor_delay * human_velocity + meteor_distance) *
+					(1.1 + human_velocity / fireball_velocity) &&
+			dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) >
+				meteor_distance - explode_radius &&
+			GetEnemyUnit(eid).flash_time < meteor_delay) {
+			ExtraState[i] += DontShoot;
 		}
 	}
 
@@ -136,6 +150,21 @@ void Eval(int num) {
 		dist(GetUnit(num).position, GetUnit(MainRole).position) < splash_radius)
 		state[num] = RandomAction;
 
+	int big, small;
+	if (MainRole == 2) {
+		big = 3;
+		small = 4;
+	} else if (MainRole == 3) {
+		big = 2;
+		small = 4;
+	} else {
+		big = 2;
+		small = 3;
+	}
+	if (num == small && GetUnit(big).hp > 0 &&
+		dist(GetUnit(num).position, GetUnit(big).position) < splash_radius)
+		state[num] = RandomAction;
+
 	switch (state[num]) {
 	case RushToCrystal:
 		Forward(num, logic->crystal[logic->faction ^ 1].position);
@@ -158,16 +187,6 @@ void Eval(int num) {
 			Forward(num, logic->map.target_places[logic->faction], false);
 		}
 		break;
-	case WanderBouns: {
-		double vv;
-		Point v;
-		do {
-			vv = RandDouble() * 2 * PI;
-			v = Point(cos(vv), sin(vv)) * human_velocity;
-		} while (isWall(GetUnit(num).position + v));
-		Forward(num, GetUnit(num).position + v, false, -1);
-		break;
-	}
 	case RandomAction: {
 		double vv;
 		Point v;
@@ -179,10 +198,48 @@ void Eval(int num) {
 		break;
 	}
 	case FollowEnemy:
-		// Forward(num, GetEnemyUnit(GetNearestEnemy(num)).position, true, -1);
 		move_relative(num, GetEnemyUnit(GetNearestEnemy(num)).position -
 							   GetUnit(num).position);
 		break;
+	case RandomButStayAway: {
+		if (dist(GetUnit(num).position, logic->map.bonus_places[num & 1]) <
+			explode_radius * 1.1) {
+			if (dist(GetUnit(num).position, logic->map.bonus_places[num & 1]) <
+				D) {
+				double vv;
+				Point v;
+				vv = RandDouble() * 2 * PI;
+				v = Point(cos(vv), sin(vv)) * explode_radius * 1;
+				Forward(num, GetUnit(num).position + v, true, -1);
+				break;
+			}
+			Forward(
+				num,
+				GetUnit(num).position +
+					(GetUnit(num).position - logic->map.bonus_places[num & 1]) /
+						dist(GetUnit(num).position,
+							 logic->map.bonus_places[num & 1]) *
+						(explode_radius * 1.1 -
+						 dist(GetUnit(num).position,
+							  logic->map.bonus_places[num & 1]) +
+						 D),
+				true, -1);
+			break;
+		}
+		double vv;
+		Point v;
+		do {
+			vv = RandDouble() * 2 * PI;
+			v = Point(cos(vv), sin(vv)) * human_velocity;
+		} while (
+			isWall(GetUnit(num).position + v) ||
+			dist(GetUnit(num).position + v, logic->map.bonus_places[num & 1]) <=
+				explode_radius * 1.1 ||
+			dist(GetUnit(num).position + v, logic->map.bonus_places[num & 1]) >=
+				bonus_radius);
+		Forward(num, GetUnit(num).position + v, false, -1);
+		break;
+	}
 	}
 }
 
@@ -190,7 +247,7 @@ Point target[10];
 void Think() {
 	for (int i = 0; i < 5; i++) {
 		target[i] = Point(-1, -1);
-		if (state[i] == WanderBouns)
+		if (ExtraState[i] & DontShoot)
 			continue;
 		Point mypos = GetUnit(i).position;
 		int nearest = GetNearestEnemy(i);
@@ -242,36 +299,10 @@ void playerAI() {
 	logic->debug(ss.str());
 
 	rep(i, 5) {
-		// if (state[i] == WanderBouns)
-		// 	continue;
-		if (target[i] == Point(-1, -1) || target[i].x < 0 || target[i].y < 0 ||
-			target[i].x > 320 || target[i].y > 320 || !isnormal(target[i].x) ||
-			!isnormal(target[i].y)) {
-			logic->shoot(i, Point(RandDouble(0, 320), RandDouble(0, 320)));
+		if (ExtraState[i] & DontShoot)
 			continue;
-		}
-		// double D = 5;
-		// logic->s+ RandDouble(-D, D)));
 		logic->shoot(i, target[i]);
-		// ofstream f("1.txt",ios::app);
-		// f<<target[i].x<<','<<target[i].y<<'\n';
-		// logic->shoot(i, Point(RandDouble(0, 320), RandDouble(0, 320)));
 	}
-
-	// for (int i = 0; i < 5; i++) {
-	// 	Point mypos = GetUnit(i).position;
-	// 	Point targ = logic->map.birth_places[logic->faction ^ 1][0];
-	// 	for (int j = 0; j < 5; j++) {
-	// 		Human unit = GetEnemyUnit(j);
-	// 		if (unit.hp <= 0)
-	// 			continue;
-	// 		if (dist(unit.position, mypos) < dist(targ, mypos))
-	// 			targ = unit.position;
-	// 	}
-	// 	double D = dist(targ, mypos) * 0.2;
-	// 	logic->shoot(
-	// 		i, Point(targ.x + RandDouble(-D, D), targ.y + RandDouble(-D, D)));
-	// }
 
 	ss << "$shoot " << clock() - t << " ";
 	t = clock();
@@ -284,7 +315,9 @@ void playerAI() {
 				(meteor_delay * human_velocity) + meteor_distance -
 					(i < 2 ? 2 : 0)) {
 				Point target =
-					ForecastPos(j, (state[i] == WanderBouns ? 1 : 0.8));
+					ForecastPos(j, (ExtraState[i] & DontShoot ? 1 : 0.8));
+				if (target == Point(-1, -1))
+					continue;
 				target.x += RandDouble(-.5, .5);
 				target.y += RandDouble(-.5, .5);
 				if (!used[i] && target != Point(-1, -1) &&
