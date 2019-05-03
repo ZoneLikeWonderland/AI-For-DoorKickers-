@@ -25,15 +25,17 @@ enum STATE {
 	// WanderBouns,
 	RandomAction,
 	FollowEnemy,
-	RandomButStayAway
+	RandomButStayAway,
+	AvoidMeteor
 } state[5];
 
-const int DontShoot = 1 << 0;
-int ExtraState[5];
+// const int DontShoot = 1 << 0;
+// int ExtraState[5];
 
 string STATEstr[] = {"RushToCrystal", "RushToEnemyTarget", "BackToOurTarget",
 					 "RushToBonus",   "ProtectCrystal", //	"WanderBouns",
-					 "RandomAction",  "FollowEnemy",	   "RandomButStayAway"};
+					 "RandomAction",  "FollowEnemy",	   "RandomButStayAway",
+					 "AvoidMeteor"};
 
 double RandDouble() { return rand() / (double)RAND_MAX; }
 double RandDouble(double L, double R) { return RandDouble() * (R - L) + L; }
@@ -67,7 +69,15 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 		Point pos = GetUnit(num).position;
 		int roplen = Astar(pos, dest, ROP);
 		if (canflash(num) && flash) {
-			flash_s(num, bestjump(roplen, ROP, pos, flash_distance));
+			dest = flash_s(num, bestjump(roplen, ROP, pos, flash_distance));
+			for (auto x : logic->meteors) {
+				if (dist(dest, x.position) < explode_radius &&
+					x.last_time <= 7) {
+					dest = firstcrosscircle(x.position, explode_radius + 1,
+											Lineseg(pos, dest));
+					flash_s(num, dest);
+				}
+			}
 		} else {
 			findthreat(num);
 			Point u = ROP[0] - pos;
@@ -81,7 +91,7 @@ void Forward(int num, Point dest, bool flash = true, double consider = 0.95) {
 int MainRole = 2;
 // state decide
 void Decide() {
-	rep(i, 5) ExtraState[i] = 0;
+	// rep(i, 5) ExtraState[i] = 0;
 	// bonus
 	rep(i, 2) {
 		int edid = GetNearestEnemy(i, true);
@@ -98,7 +108,7 @@ void Decide() {
 		} else if (dist(GetUnit(i).position, GetEnemyUnit(eid).position) <
 					   splash_radius &&
 				   dist(GetEnemyUnit(eid).position,
-						logic->map.bonus_places[i & 1]) < D)
+						past5frame[(logic->frame + 1) % 5][eid].position) > D)
 			state[i] = FollowEnemy;
 		else if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
 				 bonus_radius - human_velocity)
@@ -106,14 +116,14 @@ void Decide() {
 		else {
 			state[i] = RandomAction;
 		}
-		if (dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) <
-				(meteor_delay * human_velocity + meteor_distance) *
-					(1.1 + human_velocity / fireball_velocity) &&
-			dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) >
-				meteor_distance - explode_radius &&
-			GetEnemyUnit(eid).flash_time < meteor_delay) {
-			ExtraState[i] += DontShoot;
-		}
+		// if (dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1])
+		// < 		(meteor_delay * human_velocity + meteor_distance) * 			(1.1 +
+		// human_velocity / fireball_velocity) &&
+		// 	dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) >
+		// 		meteor_distance - explode_radius &&
+		// 	GetEnemyUnit(eid).flash_time < meteor_delay) {
+		// 	ExtraState[i] += DontShoot;
+		// }
 	}
 
 	// crystal
@@ -170,6 +180,13 @@ void Eval(int num) {
 			splash_radius * times)
 		state[num] = RandomAction;
 
+	for (auto x : logic->meteors) {
+		if (dist(GetUnit(num).position, x.position) < explode_radius + 1 &&
+			x.last_time <= 7) {
+			state[num] = AvoidMeteor;
+		}
+	}
+
 	switch (state[num]) {
 	case RushToCrystal:
 		Forward(num, logic->crystal[logic->faction ^ 1].position);
@@ -219,17 +236,6 @@ void Eval(int num) {
 				// Forward(num, GetUnit(num).position + v, true, -1);
 				break;
 			}
-			// Forward(
-			// num,
-			// GetUnit(num).position +
-			// 	(GetUnit(num).position - logic->map.bonus_places[num & 1]) /
-			// 		dist(GetUnit(num).position,
-			// 			 logic->map.bonus_places[num & 1]) *
-			// 		(explode_radius * 1.1 -
-			// 		 dist(GetUnit(num).position,
-			// 			  logic->map.bonus_places[num & 1]) +
-			// 		 D),
-			// true, -1);
 			move_relative(num, (GetUnit(num).position -
 								logic->map.bonus_places[num & 1]) /
 								   dist(GetUnit(num).position,
@@ -251,9 +257,46 @@ void Eval(int num) {
 				explode_radius * 1.1 ||
 			dist(GetUnit(num).position + v, logic->map.bonus_places[num & 1]) >=
 				bonus_radius);
-		// Forward(num, GetUnit(num).position + v, false, 0.1);
 		move_relative(num, v);
 		break;
+	}
+	case AvoidMeteor: {
+		Point pos = GetUnit(num).position;
+		for (auto x : logic->meteors) {
+			if (dist(pos, x.position) < explode_radius && x.last_time <= 7) {
+				if (dist(pos, x.position) < D) {
+					double vv;
+					Point v;
+					vv = RandDouble() * 2 * PI;
+					v = Point(cos(vv), sin(vv)) * explode_radius * 1;
+					move_relative(num, v);
+					break;
+				}
+				move_relative(num, (pos - x.position) / dist(pos, x.position) *
+									   (explode_radius * 1.1 -
+										dist(pos, x.position) + D));
+				break;
+			}
+			if (dist(pos, x.position) < explode_radius + 1 &&
+				x.last_time <= 7) {
+				double vv;
+				Point v;
+				while (1) {
+					vv = RandDouble() * 2 * PI;
+					v = Point(cos(vv), sin(vv)) * human_velocity;
+					bool flag = true;
+					for (auto y : logic->meteors) {
+						if (dist(y.position, pos + v) <= explode_radius)
+							flag = false;
+					}
+					if (!isWall(pos + v) || flag) {
+						Forward(num, pos + v, false);
+						break;
+					}
+				}
+				break;
+			}
+		}
 	}
 	}
 }
@@ -262,8 +305,8 @@ Point target[10];
 void Think() {
 	for (int i = 0; i < 5; i++) {
 		target[i] = Point(-1, -1);
-		if (ExtraState[i] & DontShoot)
-			continue;
+		// if (ExtraState[i] & DontShoot)
+		// 	continue;
 		Point mypos = GetUnit(i).position;
 		int nearest = GetNearestEnemy(i);
 		target[i] = ForecastFirePos(nearest, i);
@@ -314,8 +357,8 @@ void playerAI() {
 	logic->debug(ss.str());
 
 	rep(i, 5) {
-		if (ExtraState[i] & DontShoot)
-			continue;
+		// if (ExtraState[i] & DontShoot)
+		// 	continue;
 		logic->shoot(i, target[i]);
 	}
 
@@ -329,8 +372,8 @@ void playerAI() {
 			if (dist(GetUnit(i).position, GetEnemyUnit(j).position) <
 				(meteor_delay * human_velocity) + meteor_distance -
 					(i < 2 ? 2 : 0)) {
-				Point target =
-					ForecastPos(j, (ExtraState[i] & DontShoot ? 1 : 0.8));
+				Point target = ForecastPos(j, 0.85);
+				// ForecastPos(j, (ExtraState[i] & DontShoot ? 1 : 0.8));
 				if (target == Point(-1, -1))
 					continue;
 				target.x += RandDouble(-.5, .5);
@@ -351,4 +394,13 @@ void playerAI() {
 	rep(i, 5) ss << i << ": " << GetUnit(i).position.x << ","
 				 << GetUnit(i).position.y << " " << STATEstr[state[i]] << "  ";
 	logic->debug(ss.str());
+
+	ss << '\n';
+	ss << logic->meteors.size() << ":\n";
+	for (auto x : logic->meteors)
+		ss << x.position.x << ',' << x.position.y << ' ' << x.last_time << '\n';
+	logic->debug(ss.str());
+
+	// ofstream f("1.txt", ios::app);
+	// f << logic->meteors.size() << '\n';
 }
