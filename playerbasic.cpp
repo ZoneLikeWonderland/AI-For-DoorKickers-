@@ -77,7 +77,7 @@ void flash(int num,Point v)
     logic->flash(num);
     logic->move(num,v);
 }
-void flash_relative(int num,Point v)
+Point flash_relative(int num,Point v)
 {
     double mod2=v.x*v.x+v.y*v.y;
     if(mod2>(CONST::flash_distance-0.0001)*(CONST::flash_distance-0.0001))
@@ -91,13 +91,14 @@ void flash_relative(int num,Point v)
     v.x+=pos.x;
     v.y+=pos.y;
     flash(num,v);
+    return v;
 }
-void flash_s(int num, Point v)
+Point flash_s(int num, Point v)
 {
     Point pos=GetUnit(num).position;
     v.x-=pos.x;
     v.y-=pos.y;
-    flash_relative(num,v);
+    return flash_relative(num,v);
 }
 
 int GetNearestEnemy(int self,bool GetDeath=false){
