@@ -89,14 +89,16 @@ void Decide() {
 		if (dist(GetUnit(i).position, GetEnemyUnit(edid).position) <
 				meteor_distance &&
 			GetEnemyUnit(edid).meteor_time <
-				human_meteor_interval - meteor_delay + 7 &&
+				human_meteor_interval - meteor_delay + 8 &&
 			GetEnemyUnit(edid).meteor_time >=
-				human_meteor_interval - meteor_delay - 1 &&
+				human_meteor_interval - meteor_delay - 3 &&
 			dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) <
 				bonus_radius) {
 			state[i] = RandomButStayAway;
 		} else if (dist(GetUnit(i).position, GetEnemyUnit(eid).position) <
-				   splash_radius)
+					   splash_radius &&
+				   dist(GetEnemyUnit(eid).position,
+						logic->map.bonus_places[i & 1]) < D)
 			state[i] = FollowEnemy;
 		else if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
 				 bonus_radius - human_velocity)
@@ -146,8 +148,10 @@ void Decide() {
 
 // state evaluate
 void Eval(int num) {
+	double times = 2;
 	if (num >= 2 && MainRole != num && GetUnit(MainRole).hp > 0 &&
-		dist(GetUnit(num).position, GetUnit(MainRole).position) < splash_radius)
+		dist(GetUnit(num).position, GetUnit(MainRole).position) <
+			splash_radius * times)
 		state[num] = RandomAction;
 
 	int big, small;
@@ -162,7 +166,8 @@ void Eval(int num) {
 		small = 3;
 	}
 	if (num == small && GetUnit(big).hp > 0 &&
-		dist(GetUnit(num).position, GetUnit(big).position) < splash_radius)
+		dist(GetUnit(num).position, GetUnit(big).position) <
+			splash_radius * times)
 		state[num] = RandomAction;
 
 	switch (state[num]) {
@@ -210,20 +215,29 @@ void Eval(int num) {
 				Point v;
 				vv = RandDouble() * 2 * PI;
 				v = Point(cos(vv), sin(vv)) * explode_radius * 1;
-				Forward(num, GetUnit(num).position + v, true, -1);
+				move_relative(num, v);
+				// Forward(num, GetUnit(num).position + v, true, -1);
 				break;
 			}
-			Forward(
-				num,
-				GetUnit(num).position +
-					(GetUnit(num).position - logic->map.bonus_places[num & 1]) /
-						dist(GetUnit(num).position,
-							 logic->map.bonus_places[num & 1]) *
-						(explode_radius * 1.1 -
-						 dist(GetUnit(num).position,
-							  logic->map.bonus_places[num & 1]) +
-						 D),
-				true, -1);
+			// Forward(
+			// num,
+			// GetUnit(num).position +
+			// 	(GetUnit(num).position - logic->map.bonus_places[num & 1]) /
+			// 		dist(GetUnit(num).position,
+			// 			 logic->map.bonus_places[num & 1]) *
+			// 		(explode_radius * 1.1 -
+			// 		 dist(GetUnit(num).position,
+			// 			  logic->map.bonus_places[num & 1]) +
+			// 		 D),
+			// true, -1);
+			move_relative(num, (GetUnit(num).position -
+								logic->map.bonus_places[num & 1]) /
+								   dist(GetUnit(num).position,
+										logic->map.bonus_places[num & 1]) *
+								   (explode_radius * 1.1 -
+									dist(GetUnit(num).position,
+										 logic->map.bonus_places[num & 1]) +
+									D));
 			break;
 		}
 		double vv;
@@ -237,7 +251,8 @@ void Eval(int num) {
 				explode_radius * 1.1 ||
 			dist(GetUnit(num).position + v, logic->map.bonus_places[num & 1]) >=
 				bonus_radius);
-		Forward(num, GetUnit(num).position + v, false, -1);
+		// Forward(num, GetUnit(num).position + v, false, 0.1);
+		move_relative(num, v);
 		break;
 	}
 	}
@@ -333,6 +348,7 @@ void playerAI() {
 	t = clock();
 	logic->debug(ss.str());
 
-	rep(i, 5) ss << i << ": " << STATEstr[state[i]] << "  ";
+	rep(i, 5) ss << i << ": " << GetUnit(i).position.x << ","
+				 << GetUnit(i).position.y << " " << STATEstr[state[i]] << "  ";
 	logic->debug(ss.str());
 }
