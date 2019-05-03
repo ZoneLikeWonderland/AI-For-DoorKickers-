@@ -73,26 +73,17 @@ Point ForecastPos(int enemy, double consider = 0.8) {
 					 meteor_delay * human_velocity * consider);
 }
 
-const int disttobonus = 90;
+const double disttobonus = bonus_radius;
+const double forecastdist = 50;
 Point ForecastFirePos(int enemy, int self) {
 	Point manpos = GetEnemyUnit(enemy).position;
-	// Point dest;
-	// if (abs(manpos.x - manpos.y) < 40) {
-	// 	if (abs(angle(past5frame[(logic->frame - 4) % 5][enemy].position,
-	// 				  manpos, logic->map.target_places[logic->faction ^ 1])) <
-	// 		PI / 4) {
-	// 		dest = logic->map.target_places[logic->faction ^ 1];
-	// 	} else {
-	// 		dest = logic->map.target_places[logic->faction];
-	// 	}
-	// } else if (dist(manpos, logic->map.bonus_places[0]) < disttobonus) {
-	// 	dest = logic->map.bonus_places[0];
-	// } else if (dist(manpos, logic->map.bonus_places[1]) < disttobonus) {
-	// 	dest = logic->map.bonus_places[1];
-	// } else
-	// 	dest = logic->map.target_places[logic->faction];
-	// int roplen = Astar(manpos, dest, ROP2);
-	// Point u = ROP2[0] - manpos;
+
+	if (dist(manpos, logic->map.bonus_places[0]) < disttobonus) {
+		return manpos;
+	} else if (dist(manpos, logic->map.bonus_places[1]) < disttobonus) {
+		return manpos;
+	}
+
 	Point u = manpos - past5frame[(logic->frame - 4) % 5][enemy].position;
 	double dis = dist(manpos, GetUnit(self).position);
 	double co = cos(angle(manpos, manpos + u, GetUnit(self).position));
@@ -107,6 +98,8 @@ Point ForecastFirePos(int enemy, int self) {
 				fireball_velocity * fireball_velocity);
 	if (t != t)
 		return manpos;
-	u = u / dist(u, Point(0, 0)) * (t * human_velocity);
+
+	u = u / dist(u, Point(0, 0)) *
+		(t * human_velocity * (dis > forecastdist ? forecastdist / dis : 1));
 	return manpos + u;
 }
