@@ -74,7 +74,7 @@ Point ForecastPos(int enemy, double consider = 0.8) {
 }
 
 const double disttobonus = bonus_radius;
-const double forecastdist = 50;
+const double forecastdist = 10;
 Point ForecastFirePos(int enemy, int self) {
 	Point manpos = GetEnemyUnit(enemy).position;
 
