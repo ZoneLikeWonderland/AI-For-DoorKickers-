@@ -117,8 +117,9 @@ void Decide() {
 			state[i] = RandomAction;
 		}
 		// if (dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1])
-		// < 		(meteor_delay * human_velocity + meteor_distance) * 			(1.1 +
-		// human_velocity / fireball_velocity) &&
+		// < 		(meteor_delay * human_velocity + meteor_distance) *
+		// (1.1
+		// + human_velocity / fireball_velocity) &&
 		// 	dist(GetEnemyUnit(eid).position, logic->map.bonus_places[i & 1]) >
 		// 		meteor_distance - explode_radius &&
 		// 	GetEnemyUnit(eid).flash_time < meteor_delay) {
@@ -281,7 +282,9 @@ void Eval(int num) {
 				x.last_time <= 7) {
 				double vv;
 				Point v;
+				int t = 0;
 				while (1) {
+					t++;
 					vv = RandDouble() * 2 * PI;
 					v = Point(cos(vv), sin(vv)) * human_velocity;
 					bool flag = true;
@@ -289,7 +292,7 @@ void Eval(int num) {
 						if (dist(y.position, pos + v) <= explode_radius)
 							flag = false;
 					}
-					if (!isWall(pos + v) || flag) {
+					if (!isWall(pos + v) && flag || t > 50) {
 						Forward(num, pos + v, false);
 						break;
 					}
@@ -357,9 +360,11 @@ void playerAI() {
 	logic->debug(ss.str());
 
 	rep(i, 5) {
-		// if (ExtraState[i] & DontShoot)
-		// 	continue;
-		logic->shoot(i, target[i]);
+		double E = dist(target[i], GetUnit(i).position) * 0.2;
+		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
+							  target[i].y + RandDouble(-D, D)));
+
+		// logic->shoot(i, target[i]);
 	}
 
 	ss << "$shoot " << clock() - t << " ";
