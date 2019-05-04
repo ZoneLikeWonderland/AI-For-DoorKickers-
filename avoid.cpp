@@ -23,7 +23,7 @@ extern Logic *logic;
 extern bool isWall(Point v);
 
 const int DangerDist = 22;
-const int DangerFrames = 15;
+const int DangerFrames = 30;
 const int nD = 660;
 vector<vector<Fireball>> coming(5);
 
