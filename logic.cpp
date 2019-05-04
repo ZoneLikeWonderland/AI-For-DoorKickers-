@@ -1,18 +1,28 @@
 #include "logic.h"
 #include <iostream>
+#include <cmath>
 using namespace std;
 
 Logic* Logic::instance = 0;
 
+bool valid(Point p){
+	if(isnormal(p.x)&&isnormal(p.y))
+	return true;
+	return false;
+}
+
 void Logic::move(int num, Point p){
+	if(valid(p))
 	ope.move[num] = p;
 }
 
 void Logic::shoot(int num, Point p){
+	if(valid(p))
 	ope.shoot[num] = p;
 }
 
 void Logic::meteor(int num, Point p){
+	if(valid(p))
 	ope.meteor[num] = p;
 }
 
