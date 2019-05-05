@@ -106,11 +106,12 @@ void Decide() {
 				bonus_radius) {
 			state[i] = RandomButStayAway;
 		} else if (dist(GetUnit(i).position, GetEnemyUnit(eid).position) <
-					   splash_radius 
-				// 	   &&
-				//    dist(GetEnemyUnit(eid).position,
-				// 		past5frame[(logic->frame + 1) % 5][eid].position) > D
-						)
+				   splash_radius
+				   // 	   &&
+				   //    dist(GetEnemyUnit(eid).position,
+				   // 		past5frame[(logic->frame + 1) % 5][eid].position) >
+				   // D
+		)
 			state[i] = FollowEnemy;
 		else if (dist(GetUnit(i).position, logic->map.bonus_places[i & 1]) >=
 				 bonus_radius - human_velocity)
@@ -364,6 +365,8 @@ void playerAI() {
 	rep(i, 5) {
 		double E = dist(target[i], GetUnit(i).position) * 0.2;
 		double D = 1;
+		if (i < 2)
+			D = 0.01;
 		logic->shoot(i, Point(target[i].x + RandDouble(-D, D),
 							  target[i].y + RandDouble(-D, D)));
 
