@@ -182,31 +182,35 @@ Point dealthreat(int num, Point v, double consider = 0.95) {
 	sort(LR.begin(), LR.end(), anglesmall);
 
 	// for (auto x : LR) cout<<x.first.x<<","<<x.first.y<<" "<<x.second<<"\n";
-
+	int level0 = 99999;
 	for (auto x : LR) {
 		if (x.second == -1 && level == 0) {
 			return v;
 		}
 		if (x.second == 0) {
-			if (level == 0) {
+			// if (level == 0) {
 				if (!isWall(x.first)) {
-					if (abs(angle(manpos, manpos + v, x.first)) <
-						abs(angle(manpos, manpos + v, manpos + w))) {
+					if (abs(angle(manpos, manpos + v, x.first)) + level * 4 <
+						abs(angle(manpos, manpos + v, manpos + w)) +
+							level0 * 4) {
 						w = x.first - manpos;
+						level0 = level;
 					}
 				}
-			}
+			// }
 			level++;
 		} else if (x.second == 1) {
 			level--;
-			if (level == 0) {
+			// if (level == 0) {
 				if (!isWall(x.first)) {
-					if (abs(angle(manpos, manpos + v, x.first)) <
-						abs(angle(manpos, manpos + v, manpos + w))) {
+					if (abs(angle(manpos, manpos + v, x.first)) + level * 4 <
+						abs(angle(manpos, manpos + v, manpos + w)) +
+							level0 * 4) {
 						w = x.first - manpos;
+						level0 = level;
 					}
 				}
-			}
+			// }
 		}
 	}
 	// print(w);
